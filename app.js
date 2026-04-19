@@ -820,13 +820,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 let aiResponseText = await response.text();
                 
-                // Limpiar cualquier mensaje de advertencia de la API antes de mostrar
+                // Limpiar cualquier mensaje de advertencia de la API de forma segura
                 aiResponseText = aiResponseText
-                    .replace(/⚠️.*?normally\./gs, '')
-                    .replace(/The Pollinations legacy.*?normally\./gs, '')
-                    .replace(/Please migrate.*?normally\./gs, '')
-                    .replace(/Note: Anonymous.*?normally\./g, '')
+                    .replace(/⚠️[\s\S]*?normally\./g, '')
+                    .replace(/The Pollinations legacy[\s\S]*?normally\./g, '')
                     .trim();
+
+                // Fallback por si la respuesta queda vacía
+                if (!aiResponseText) {
+                    aiResponseText = "He procesado tu consulta pero no he recibido una respuesta clara. ¿Podrías intentar preguntarme de otra forma? 😊";
+                }
 
                 typingDiv.remove();
                 // Reemplazamos saltos de linea con <br> para HTML
