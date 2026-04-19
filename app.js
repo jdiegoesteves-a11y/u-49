@@ -818,8 +818,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (!response.ok) throw new Error('Error en la API de IA');
                 
-                const aiResponseText = await response.text();
+                let aiResponseText = await response.text();
                 
+                // Limpiar cualquier mensaje de advertencia de la API antes de mostrar
+                aiResponseText = aiResponseText
+                    .replace(/⚠️.*?normally\./gs, '')
+                    .replace(/The Pollinations legacy.*?normally\./gs, '')
+                    .replace(/Please migrate.*?normally\./gs, '')
+                    .replace(/Note: Anonymous.*?normally\./g, '')
+                    .trim();
+
                 typingDiv.remove();
                 // Reemplazamos saltos de linea con <br> para HTML
                 addMessage(aiResponseText.replace(/\n/g, '<br>'), 'assistant');
