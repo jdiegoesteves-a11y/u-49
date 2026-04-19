@@ -117,9 +117,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             currentInventoryData = [];
+            let hasExpired = false;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const batchUpdate = writeBatch(db);
+
             snapshot.forEach((docSnap) => {
-                currentInventoryData.push({ id: docSnap.id, ...docSnap.data() });
+                const item = { id: docSnap.id, ...docSnap.data() };
+                
+                if (item.revisado && item.proximaRevision && item.proximaRevision < todayStr) {
+                    item.revisado = false;
+                    batchUpdate.update(doc(db, currentCollection, item.id), { revisado: false });
+                    hasExpired = true;
+                }
+                
+                currentInventoryData.push(item);
             });
+
+            if (hasExpired) {
+                batchUpdate.commit().catch(e => console.error("Error auto-unchecking:", e));
+            }
 
             currentInventoryData.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, {numeric: true, sensitivity: 'base'}));
 
@@ -221,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td data-label="Modelo">${item.modelo || ''}</td>
                 <td data-label="Serie">${item.serie || ''}</td>
                 <td data-label="Estado">
-                    <select class="status-select default" id="status-${item.id}">
+                    <select class="status-select default" id="status-${item.id}" ${item.revisado ? 'disabled' : ''}>
                         <option value="" disabled ${!item.estado ? 'selected' : ''}>Seleccionar...</option>
                         <option value="bueno" ${item.estado === 'bueno' ? 'selected' : ''}>Bueno</option>
                         <option value="malo" ${item.estado === 'malo' ? 'selected' : ''}>Malo</option>
@@ -231,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td data-label="Última Rev.">${item.ultimaRevision || '-'}</td>
                 <td data-label="Próxima Rev.">
-                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;">
+                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''} min="2024-01-01" max="2100-12-31">
                 </td>
                 <td data-label="Revisión" class="action-column">
                     <div class="checkbox-wrapper">
@@ -239,11 +255,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </td>
                 <td data-label="Comentarios" class="action-column">
-                    <textarea class="comment-input" id="comment-${item.id}" rows="1" placeholder="Agregar comentario...">${item.comentarios || ''}</textarea>
+                    <textarea class="comment-input" id="comment-${item.id}" rows="1" placeholder="Agregar comentario..." ${item.revisado ? 'disabled' : ''}>${item.comentarios || ''}</textarea>
                 </td>
                 <td data-label="Acciones" class="action-column" style="display:flex; gap:15px; align-items:center; justify-content:center; padding-top:10px;">
-                    <button class="icon-btn edit-item-btn" id="edit-${item.id}" title="Editar Item" style="color: #3b82f6; background: none; border: none; cursor: pointer; font-size: 22px;"><i class="ph ph-pencil-simple"></i></button>
-                    <button class="icon-btn delete-item-btn" id="delete-item-${item.id}" title="Borrar Item" style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 22px;"><i class="ph ph-trash"></i></button>
+                    <button class="icon-btn edit-item-btn" id="edit-${item.id}" title="Editar Item" style="color: ${item.revisado ? '#9ca3af' : '#3b82f6'}; background: none; border: none; cursor: ${item.revisado ? 'not-allowed' : 'pointer'}; font-size: 22px;" ${item.revisado ? 'disabled' : ''}><i class="ph ph-pencil-simple"></i></button>
+                    <button class="icon-btn delete-item-btn" id="delete-item-${item.id}" title="Borrar Item" style="color: ${item.revisado ? '#9ca3af' : '#ef4444'}; background: none; border: none; cursor: ${item.revisado ? 'not-allowed' : 'pointer'}; font-size: 22px;" ${item.revisado ? 'disabled' : ''}><i class="ph ph-trash"></i></button>
                 </td>
             `;
 
@@ -281,6 +297,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const checkbox = tr.querySelector(`#check-${item.id}`);
             checkbox.addEventListener('change', async (e) => {
                 const isChecked = e.target.checked;
+                
+                if (!isChecked) {
+                    if (item.proximaRevision) {
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        if (item.proximaRevision >= todayStr) {
+                            if (!confirm("Aún no pasa la fecha. ¿Estás seguro que quieres volver a dejarlo en pendiente?")) {
+                                e.target.checked = true;
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 const updateData = { revisado: isChecked };
                 
                 if (isChecked) { 
