@@ -789,26 +789,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             aiMessages.scrollTop = aiMessages.scrollHeight;
 
             try {
-                // Preparamos los datos del inventario para la IA (minificados para ahorrar tokens)
+                // Verificar que hay datos cargados
+                if (!currentInventoryData || currentInventoryData.length === 0) {
+                    typingDiv.remove();
+                    addMessage("⚠️ Aún no se han cargado los datos del inventario. Espera un momento y vuelve a intentarlo.", 'assistant');
+                    return;
+                }
+
+                // Preparamos los datos del inventario para la IA
                 const inventorySummary = currentInventoryData.map(i => ({
-                    c: i.codigo,
-                    d: i.descripcion,
-                    u: i.ubicacion || 'N/A',
-                    e: i.estado || 'N/A'
+                    codigo: i.codigo || '',
+                    descripcion: i.descripcion || '',
+                    ubicacion: i.ubicacion || 'No especificada',
+                    estado: i.estado || 'No especificado'
                 }));
 
-                const systemPrompt = `Eres un asistente experto en inventarios. Analiza la pregunta del usuario y responde de manera amigable, profesional y directa basándote EXCLUSIVAMENTE en el siguiente inventario (c=código, d=descripción, u=ubicación, e=estado): ${JSON.stringify(inventorySummary)}. 
-                Instrucciones: 
-                - Si el usuario te saluda, salúdalo amigablemente.
-                - Si te preguntan 'cuántos', cuenta los ítems en el inventario que coincidan (ten en cuenta plurales y singulares, ej: piton = pitones) y da el total.
-                - Si te preguntan dónde está algo, da su ubicación (u).
-                - Sé conciso, usa emojis, y usa un tono profesional.
-                - NO inventes datos. Si no hay, di que no encontraste nada.`;
+                const systemPrompt = `Eres un asistente de inventario para bomberos. Tienes acceso al siguiente inventario en formato JSON. DEBES responder basándote ÚNICAMENTE en estos datos reales.
+
+INVENTARIO: ${JSON.stringify(inventorySummary)}
+
+REGLAS:
+- Responde siempre en español, de manera amigable y con emojis.
+- Si preguntan "cuántos [ITEM]", filtra el inventario por descripcion que contenga palabras similares (piton/pitones, manguera/mangueras, etc.) y cuenta los resultados. Muestra el número exacto.
+- Si preguntan "dónde está [ITEM]", busca en el inventario y muestra la ubicación.
+- Si preguntan por el estado, agrupa por estado (bueno/regular/malo).
+- Si no encuentras el ítem, dilo claramente.
+- Considera sinónimos y formas plurales/singulares al buscar.
+- Sé conciso y directo.`;
 
                 const response = await fetch('https://text.pollinations.ai/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        model: 'openai',
                         messages: [
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: query }
@@ -818,21 +831,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (!response.ok) throw new Error('Error en la API de IA');
                 
-                let aiResponseText = await response.text();
-                
-                // Limpiar cualquier mensaje de advertencia de la API de forma segura
-                aiResponseText = aiResponseText
-                    .replace(/⚠️[\s\S]*?normally\./g, '')
-                    .replace(/The Pollinations legacy[\s\S]*?normally\./g, '')
-                    .trim();
-
-                // Fallback por si la respuesta queda vacía
-                if (!aiResponseText) {
-                    aiResponseText = "He procesado tu consulta pero no he recibido una respuesta clara. ¿Podrías intentar preguntarme de otra forma? 😊";
-                }
+                const aiResponseText = await response.text();
 
                 typingDiv.remove();
-                // Reemplazamos saltos de linea con <br> para HTML
                 addMessage(aiResponseText.replace(/\n/g, '<br>'), 'assistant');
 
             } catch (error) {
