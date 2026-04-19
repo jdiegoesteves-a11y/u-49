@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (item.revisado && item.proximaRevision && item.proximaRevision.trim() !== '' && item.proximaRevision < todayStr) {
                     item.revisado = false;
-                    batchUpdate.update(doc(db, currentCollection, item.id), { revisado: false });
+                    batchUpdate.update(doc(db, currentCollection, item.id), { revisado: false, ultimaRevision: "" });
                     hasExpired = true;
                 }
                 
@@ -212,22 +212,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <option value="no-existe" ${item.estado === 'no-existe' ? 'selected' : ''}>No existe</option>
                     </select>
                 </td>
-                <td data-label="Última Rev.">
+                <td data-label="Fecha de Revisión">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
                         <span>${item.ultimaRevision || '-'}</span>
                         ${item.ultimaRevision ? `
-                        <button class="clear-revision-btn" id="clear-rev-${item.id}" title="Borrar Última Revisión" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 1.1rem; display: flex; align-items: center;">
+                        <button class="clear-revision-btn" id="clear-rev-${item.id}" title="Borrar Fecha de Revisión" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 1.1rem; display: flex; align-items: center;">
                             <i class="ph ph-x-circle"></i>
                         </button>` : ''}
                     </div>
-                </td>
-                <td data-label="Próxima Rev.">
-                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''} max="9999-12-31">
                 </td>
                 <td data-label="Revisión" class="action-column">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" class="custom-checkbox" id="check-${item.id}" ${item.revisado ? 'checked' : ''}>
                     </div>
+                </td>
+                <td data-label="Próxima Rev.">
+                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''} max="9999-12-31">
                 </td>
                 <td data-label="Comentarios" class="action-column">
                     <textarea class="comment-input" id="comment-${item.id}" rows="1" placeholder="Agregar comentario..." ${item.revisado ? 'disabled' : ''}>${item.comentarios || ''}</textarea>
@@ -296,6 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else { 
                     tr.classList.remove('completed'); 
                     reviewedCount--; 
+                    updateData.ultimaRevision = "";
                 }
                 
                 reviewedItemsEl.textContent = reviewedCount;
@@ -351,11 +352,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const clearRevBtn = tr.querySelector(`#clear-rev-${item.id}`);
             if (clearRevBtn) {
                 clearRevBtn.addEventListener('click', async () => {
-                    const pass = prompt("Ingresa la contraseña para borrar la última revisión:");
-                    if (pass === "U512026*") {
+                    if (confirm("¿Estás seguro de borrar la fecha de revisión?")) {
                         await updateDoc(doc(db, currentCollection, item.id), { ultimaRevision: "" });
-                    } else if (pass !== null) {
-                        alert("Contraseña incorrecta.");
                     }
                 });
             }
