@@ -265,17 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             checkbox.addEventListener('change', async (e) => {
                 const isChecked = e.target.checked;
                 
-                if (!isChecked) {
-                    if (item.proximaRevision) {
-                        const todayStr = new Date().toISOString().split('T')[0];
-                        if (item.proximaRevision >= todayStr) {
-                            if (!confirm("Aún no pasa la fecha. ¿Estás seguro que quieres volver a dejarlo en pendiente?")) {
-                                e.target.checked = true;
-                                return;
-                            }
-                        }
-                    }
-                }
+
 
                 const updateData = { revisado: isChecked };
                 
