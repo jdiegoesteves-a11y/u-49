@@ -333,14 +333,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const nextRevInput = tr.querySelector(`#next-rev-${item.id}`);
             nextRevInput.addEventListener('input', (e) => {
                 const val = e.target.value;
-                if (val) {
+                // YYYY-MM-DD tiene exactamente 10 caracteres. Solo desenfocamos cuando esté completo.
+                if (val && val.length === 10) {
                     const parts = val.split('-');
-                    if (parts[0] && parts[0].length >= 4) {
-                        if (parts[0].length > 4) {
-                            parts[0] = parts[0].substring(0, 4);
-                            e.target.value = parts.join('-');
-                        }
-                        // Solo desenfocamos si el año está completo para evitar que sigan escribiendo infinitamente
+                    if (parts[0] && parts[0].length === 4) {
                         e.target.blur();
                     }
                 }
