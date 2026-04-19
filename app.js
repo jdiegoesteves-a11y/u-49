@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const { jsPDF } = window.jspdf;
                 const pdfDoc = new jsPDF({ orientation: 'landscape' });
-                pdfDoc.text("Inventario 5ta Brigada U-30", 14, 15);
+                pdfDoc.text("Inventario U-51 - Cía. 51", 14, 15);
                 pdfDoc.setFontSize(10);
 
                 const fetchImageAsBase64 = (url) => {

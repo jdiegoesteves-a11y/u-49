@@ -1,5 +1,5 @@
-$port = 8080
-$path = "c:\APLICACIONES EMILIO WEB\inventario-5ta-brigada"
+$port = 8081
+$path = $PSScriptRoot
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:$port/")
 $listener.Start()
