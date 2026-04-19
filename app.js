@@ -817,10 +817,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else if (q.includes("hola") || q.includes("buenos dias") || q.includes("buenas tardes")) {
                 response = `¡Hola! Qué gusto saludarte. Estoy listo para ayudarte con el inventario. ¿Qué necesitas saber hoy? 😊`;
-            } else if (q.includes("gracias") || q.includes("gracias") || q.includes("ok")) {
+            } else if (q.includes("gracias") || q.includes("ok")) {
                 response = `¡De nada! Aquí estaré si necesitas algo más. ¡Buen trabajo con el inventario! ✨`;
             } else {
-                response = "¡Entendido! Pero por ahora mi "cerebro" solo sabe contar ítems (ej: '¿cuantos tramos hay?') o buscar dónde están guardados. ¿Probamos con eso? 🚀";
+                response = "¡Entendido! Pero por ahora mi 'cerebro' solo sabe contar ítems (ej: '¿cuantos tramos hay?') o buscar dónde están guardados. ¿Probamos con eso? 🚀";
             }
 
             setTimeout(() => {
