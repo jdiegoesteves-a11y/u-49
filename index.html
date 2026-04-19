@@ -35,6 +35,8 @@
         <div class="splash-content">
             <img src="logo.jpeg" alt="Logo" class="splash-logo">
             <h1>Bienvenido</h1>
+            <p style="font-weight: 600; margin-bottom: 10px;">¿Quién va a hacer inventario hoy?</p>
+            <input type="text" id="inventariador-name" placeholder="Escribe tu nombre..." style="padding: 12px; border-radius: 8px; border: 1px solid #ccc; width: 80%; margin-bottom: 25px; font-size: 1rem; text-align: center;">
             <p>Selecciona el inventario que deseas gestionar:</p>
             <div class="unit-selection">
                 <button class="unit-btn" data-unit="CC51">
@@ -219,9 +221,9 @@
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 5px;">
-                    <div style="flex: 1;">
+                    <div style="flex: 1; display: none;">
                         <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Última Revisión:</label>
-                        <input type="date" id="edit-ultima-revision" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
+                        <input type="text" id="edit-ultima-revision" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;" disabled>
                     </div>
                     <div style="flex: 1;">
                         <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Próxima Revisión:</label>

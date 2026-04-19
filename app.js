@@ -60,6 +60,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const appContainer = document.querySelector('.app-container');
     const mainTitle = document.getElementById('main-title');
 
+    const inventariadorInput = document.getElementById('inventariador-name');
+    let inventariador = localStorage.getItem('inventariador') || '';
+    if (inventariador) {
+        inventariadorInput.value = inventariador;
+    }
+
     const initAppForUnit = (unit) => {
         currentUnit = unit;
         localStorage.setItem('selectedUnit', unit);
@@ -75,6 +81,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     unitButtons.forEach(btn => {
         btn.addEventListener('click', () => {
+            const name = inventariadorInput.value.trim();
+            if (!name) {
+                alert('Por favor, ingresa tu nombre antes de continuar.');
+                return;
+            }
+            inventariador = name;
+            localStorage.setItem('inventariador', name);
             initAppForUnit(btn.dataset.unit);
         });
     });
@@ -240,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     reviewedCount++; 
                     // Set current date as Last Review if not already set or whenever checked
                     const today = new Date().toISOString().split('T')[0];
-                    updateData.ultimaRevision = today;
+                    updateData.ultimaRevision = `${today} por ${inventariador}`;
                 } else { 
                     tr.classList.remove('completed'); 
                     reviewedCount--; 
@@ -514,6 +527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = true;
 
             const originalCodigo = document.getElementById('edit-original-codigo').value;
+            const isChecked = document.getElementById('edit-revisado').checked;
             const updatedItem = {
                 sicafi: document.getElementById('edit-sicafi').value.trim(),
                 pf: document.getElementById('edit-pf').value.trim(),
@@ -523,11 +537,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 modelo: document.getElementById('edit-modelo').value.trim(),
                 serie: document.getElementById('edit-serie').value.trim(),
                 estado: document.getElementById('edit-estado').value,
-                ultimaRevision: document.getElementById('edit-ultima-revision').value,
                 proximaRevision: document.getElementById('edit-proxima-revision').value,
-                revisado: document.getElementById('edit-revisado').checked,
+                revisado: isChecked,
                 comentarios: document.getElementById('edit-comentarios').value.trim()
             };
+
+            const currentItem = currentInventoryData.find(i => i.codigo === originalCodigo);
+            if (isChecked && currentItem && !currentItem.revisado) {
+                const today = new Date().toISOString().split('T')[0];
+                updatedItem.ultimaRevision = `${today} por ${inventariador}`;
+            }
 
             try {
                 await updateDoc(doc(db, currentCollection, originalCodigo), updatedItem);
