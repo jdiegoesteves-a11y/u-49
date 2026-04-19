@@ -777,6 +777,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = query.toLowerCase();
             let response = "";
 
+            // Mostrar "escribiendo..."
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'ai-message assistant';
+            typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+            aiMessages.appendChild(typingDiv);
+            aiMessages.scrollTop = aiMessages.scrollHeight;
+
             if (q.includes("cuantos") || q.includes("cuántos") || q.includes("cantidad")) {
                 const cleanQuery = q.replace(/cuantos|cuántos|hay|de|un|una|tramos|trama|cantidad|metros|metro/g, "").trim();
                 const keywords = cleanQuery.split(" ").filter(w => w.length > 1);
@@ -788,9 +795,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 if (matches.length > 0) {
-                    response = `He encontrado **${matches.length}** ítems que coinciden.`;
+                    response = `¡Claro! He revisado el inventario y encontré **${matches.length}** ítems que coinciden con lo que buscas. 🛠️📦`;
                 } else {
-                    response = "No encontré ítems con esa descripción. Intenta ser más específico.";
+                    response = "Vaya, no he podido encontrar ítems con esa descripción exacta. ¿Podrías intentar con otras palabras? 🔍";
                 }
             } else if (q.includes("donde") || q.includes("dónde") || q.includes("ubicacion") || q.includes("ubicación")) {
                 const cleanQuery = q.replace(/donde|dónde|está|esta|el|la|los|las|ubicacion|ubicación/g, "").trim();
@@ -799,15 +806,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     (item.descripcion || "").toLowerCase().includes(cleanQuery)
                 );
                 if (match) {
-                    response = `El ítem **${match.descripcion}** (${match.codigo}) está en: **${match.ubicacion || 'No especificada'}**.`;
+                    response = `¡Lo encontré! El ítem **${match.descripcion}** (${match.codigo}) se encuentra en: **${match.ubicacion || 'una ubicación no especificada'}**. 📍`;
                 } else {
-                    response = "No encontré el ítem solicitado.";
+                    response = "Mmm... no logro localizar ese ítem en los registros. ¿Me podrías dar el código o una descripción más clara? 🤔";
                 }
+            } else if (q.includes("hola") || q.includes("buenos dias") || q.includes("buenas tardes")) {
+                response = `¡Hola! Qué gusto saludarte. Estoy listo para ayudarte con el inventario. ¿Qué necesitas saber hoy? 😊`;
+            } else if (q.includes("gracias") || q.includes("gracias") || q.includes("ok")) {
+                response = `¡De nada! Aquí estaré si necesitas algo más. ¡Buen trabajo con el inventario! ✨`;
             } else {
-                response = "Puedo ayudarte a contar ítems (ej: 'cuantos tramos de 1m') o buscar su ubicación.";
+                response = "¡Entendido! Pero por ahora mi "cerebro" solo sabe contar ítems (ej: '¿cuantos tramos hay?') o buscar dónde están guardados. ¿Probamos con eso? 🚀";
             }
 
-            setTimeout(() => addMessage(response, 'assistant'), 500);
+            setTimeout(() => {
+                typingDiv.remove();
+                addMessage(response, 'assistant');
+            }, 1000);
         }
 
         sendAi.addEventListener('click', () => {
