@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             snapshot.forEach((docSnap) => {
                 const item = { id: docSnap.id, ...docSnap.data() };
                 
-                if (item.revisado && item.proximaRevision && item.proximaRevision < todayStr) {
+                if (item.revisado && item.proximaRevision && item.proximaRevision.trim() !== '' && item.proximaRevision < todayStr) {
                     item.revisado = false;
                     batchUpdate.update(doc(db, currentCollection, item.id), { revisado: false });
                     hasExpired = true;
@@ -179,39 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderTable(filteredData, tableBody, totalItemsEl, reviewedItemsEl, modal, modalImg);
     });
 
-    // Global Proxima Revision Listener
-    const globalNextRev = document.getElementById('global-next-rev');
-    globalNextRev.addEventListener('change', async (e) => {
-        const newDate = e.target.value;
-        if (!newDate) return;
-        
-        if (!confirm(`¿Deseas asignar la fecha ${newDate} a TODOS los ítems visibles en la tabla?`)) {
-            e.target.value = '';
-            return;
-        }
-
-        const filter = searchInput.value.toLowerCase();
-        const filteredData = currentInventoryData.filter(item => 
-            (item.descripcion || '').toLowerCase().includes(filter) ||
-            (item.codigo || '').toLowerCase().includes(filter)
-        );
-
-        const batch = writeBatch(db);
-        filteredData.forEach(item => {
-            const docRef = doc(db, currentCollection, item.id);
-            batch.update(docRef, { proximaRevision: newDate });
-        });
-        
-        try {
-            await batch.commit();
-            alert(`Se han actualizado ${filteredData.length} ítems.`);
-            e.target.value = '';
-        } catch (error) {
-            console.error("Error updating batch:", error);
-            alert("Error al actualizar los ítems.");
-        }
-    });
-
     function renderTable(inventoryData, tableBody, totalItemsEl, reviewedItemsEl, modal, modalImg) {
         tableBody.innerHTML = '';
 
@@ -247,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td data-label="Última Rev.">${item.ultimaRevision || '-'}</td>
                 <td data-label="Próxima Rev.">
-                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''} min="2024-01-01" max="2100-12-31">
+                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''}>
                 </td>
                 <td data-label="Revisión" class="action-column">
                     <div class="checkbox-wrapper">
@@ -356,8 +323,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Inline Proxima Revision
             const nextRevInput = tr.querySelector(`#next-rev-${item.id}`);
-            nextRevInput.addEventListener('change', async (e) => {
-                await updateDoc(doc(db, currentCollection, item.id), { proximaRevision: e.target.value });
+            nextRevInput.addEventListener('blur', async (e) => {
+                if (item.proximaRevision !== e.target.value) {
+                    await updateDoc(doc(db, currentCollection, item.id), { proximaRevision: e.target.value });
+                }
             });
 
             // Delete Item
