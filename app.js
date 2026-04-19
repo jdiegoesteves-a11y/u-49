@@ -212,15 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <option value="no-existe" ${item.estado === 'no-existe' ? 'selected' : ''}>No existe</option>
                     </select>
                 </td>
-                <td data-label="Fecha de Revisión">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                        <span>${item.ultimaRevision || '-'}</span>
-                        ${item.ultimaRevision ? `
-                        <button class="clear-revision-btn" id="clear-rev-${item.id}" title="Borrar Fecha de Revisión" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 1.1rem; display: flex; align-items: center;">
-                            <i class="ph ph-x-circle"></i>
-                        </button>` : ''}
-                    </div>
-                </td>
+                <td data-label="Fecha de Revisión">${item.ultimaRevision || '-'}</td>
                 <td data-label="Revisión" class="action-column">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" class="custom-checkbox" id="check-${item.id}" ${item.revisado ? 'checked' : ''}>
@@ -348,15 +340,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // Clear Last Revision
-            const clearRevBtn = tr.querySelector(`#clear-rev-${item.id}`);
-            if (clearRevBtn) {
-                clearRevBtn.addEventListener('click', async () => {
-                    if (confirm("¿Estás seguro de borrar la fecha de revisión?")) {
-                        await updateDoc(doc(db, currentCollection, item.id), { ultimaRevision: "" });
-                    }
-                });
-            }
+
 
             // Delete Item
             const deleteItemBtn = tr.querySelector(`#delete-item-${item.id}`);
