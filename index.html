@@ -113,6 +113,22 @@
             </div>
         </header>
 
+        <!-- Premium Inline AI Assistant -->
+        <div class="ai-inline-wrapper" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); overflow: hidden;">
+            <div class="ai-inline-header" style="display: flex; align-items: center; padding: 1rem 1.5rem; gap: 1rem; border-bottom: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);">
+                    <i class="ph ph-sparkle"></i>
+                </div>
+                <input type="text" id="ai-input" placeholder="Pregúntale a la IA (Ej: ¿Cuántos pitones hay? o ¿Dónde está la manguera?)..." style="flex: 1; border: none; background: transparent; font-size: 1.05rem; color: #1e293b; outline: none; font-family: inherit;">
+                <button id="send-ai" style="background: #6366f1; color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                    Analizar <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+            <div id="ai-messages" class="ai-inline-messages" style="padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; background: #ffffff;">
+                <!-- Messages will appear here -->
+            </div>
+        </div>
+
         <main class="main-content">
             <div class="table-container">
                 <table id="inventory-table">
@@ -243,37 +259,6 @@
                 <button type="submit" class="upload-btn"
                     style="background: #3b82f6; color: white; margin-top: 10px; justify-content: center;">Actualizar
                     Item</button>
-            </form>
-        </div>
-    </div>
-    <!-- IA Assistant Floating Button -->
-    <div id="ai-assistant-btn" title="Asistente Inteligente">
-        <i class="ph ph-sparkle"></i>
-    </div>
-
-    <!-- IA Assistant Container -->
-    <div id="ai-assistant-container" class="hidden">
-        <div class="ai-assistant-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="ph ph-sparkle" style="color: #6366f1;"></i>
-                <span>Asistente de Inventario</span>
-            </div>
-            <button id="close-ai" style="background: none; border: none; cursor: pointer; color: #666;"><i class="ph ph-x"></i></button>
-        </div>
-        <div class="ai-assistant-messages" id="ai-messages">
-            <div class="ai-message assistant">
-                Hola! Soy tu asistente. Puedes preguntarme cosas como:
-                <br>• "¿Cuantos tramos de manguera hay?"
-                <br>• "¿Donde está el monitor?"
-                <br>• "¿Que items estan en mal estado?"
-            </div>
-        </div>
-        <div class="ai-assistant-input">
-            <input type="text" id="ai-input" placeholder="Hazme una pregunta...">
-            <button id="send-ai"><i class="ph ph-paper-plane-right"></i></button>
-        </div>
-    </div>
-
     <script type="module" src="/app.js"></script>
 </body>
 

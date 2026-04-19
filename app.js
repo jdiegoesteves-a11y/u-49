@@ -758,75 +758,99 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- AI Assistant Logic ---
-    const aiBtn = document.getElementById('ai-assistant-btn');
-    const aiContainer = document.getElementById('ai-assistant-container');
-    const closeAi = document.getElementById('close-ai');
+    // --- Smart AI Assistant Logic ---
     const aiInput = document.getElementById('ai-input');
     const sendAi = document.getElementById('send-ai');
     const aiMessages = document.getElementById('ai-messages');
 
-    if (aiBtn) {
-        aiBtn.addEventListener('click', () => aiContainer.classList.toggle('hidden'));
-        closeAi.addEventListener('click', () => aiContainer.classList.add('hidden'));
-
+    if (aiInput && sendAi && aiMessages) {
         function addMessage(text, sender) {
             const div = document.createElement('div');
             div.className = `ai-message ${sender}`;
             div.innerHTML = text;
+            
+            // Si es el primer mensaje, expandimos la caja
+            if (aiMessages.style.maxHeight === '0px' || !aiMessages.style.maxHeight) {
+                aiMessages.style.padding = '1.5rem';
+                aiMessages.style.maxHeight = '400px';
+                aiMessages.style.overflowY = 'auto';
+            }
+            
             aiMessages.appendChild(div);
             aiMessages.scrollTop = aiMessages.scrollHeight;
         }
 
+        // Función para normalizar palabras (quitar acentos, y pasar a singular basico)
+        function normalizeWord(word) {
+            let w = word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (w.endsWith("es") && w.length > 4) {
+                w = w.slice(0, -2);
+            } else if (w.endsWith("s") && w.length > 3) {
+                w = w.slice(0, -1);
+            }
+            return w;
+        }
+
         async function processAiQuery(query) {
-            const q = query.toLowerCase();
             let response = "";
 
-            // Mostrar "escribiendo..."
+            // Mostrar "Analizando..."
             const typingDiv = document.createElement('div');
             typingDiv.className = 'ai-message assistant';
             typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
             aiMessages.appendChild(typingDiv);
             aiMessages.scrollTop = aiMessages.scrollHeight;
 
-            if (q.includes("cuantos") || q.includes("cuántos") || q.includes("cantidad")) {
-                const cleanQuery = q.replace(/cuantos|cuántos|hay|de|un|una|tramos|trama|cantidad|metros|metro/g, "").trim();
-                const keywords = cleanQuery.split(" ").filter(w => w.length > 1);
-                
+            const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            // Detectar intención
+            const isLocation = /donde|ubicacion|lugar|encuentra/.test(q);
+            const isStatus = /estado|condicion|mal|buen/.test(q);
+            // Por defecto asumimos que si no es lugar o estado, es contar (cuantos, etc)
+            
+            // Palabras clave ignorando palabras comunes
+            const stopWords = ['cuanto', 'cuantos', 'cantidad', 'donde', 'esta', 'estan', 'el', 'la', 'los', 'las', 'de', 'un', 'una', 'en', 'hay', 'es', 'son', 'que', 'estado', 'ubicacion', 'numero', 'total', 'para', 'con', 'por', 'sobre'];
+            const rawWords = q.split(/[\s,¿?]+/).filter(w => w.length > 2 && !stopWords.includes(w));
+            const searchTerms = rawWords.map(normalizeWord);
+
+            if (q.includes("hola") || q.includes("buenos dias") || q.includes("buenas tardes")) {
+                response = `¡Hola! Qué gusto saludarte. Soy tu asistente de inventario. ¿Qué necesitas analizar hoy? 😊`;
+            } else if (q.includes("gracias") || q.includes("ok")) {
+                response = `¡Para servirte! Aquí estaré si necesitas consultar algo más. ✨`;
+            } else if (searchTerms.length > 0) {
+                // Filtrar items
                 const matches = currentInventoryData.filter(item => {
-                    const desc = (item.descripcion || "").toLowerCase();
-                    const code = (item.codigo || "").toLowerCase();
-                    return keywords.every(kw => desc.includes(kw) || code.includes(kw));
+                    const desc = normalizeWord(item.descripcion || "");
+                    const code = normalizeWord(item.codigo || "");
+                    const loc = normalizeWord(item.ubicacion || "");
+                    // Requiere que TODAS las palabras clave de búsqueda estén en la descripción, código o ubicación
+                    return searchTerms.every(term => desc.includes(term) || code.includes(term) || loc.includes(term));
                 });
 
                 if (matches.length > 0) {
-                    response = `¡Claro! He revisado el inventario y encontré **${matches.length}** ítems que coinciden con lo que buscas. 🛠️📦`;
+                    if (isLocation) {
+                        // Agrupar por ubicación
+                        const locs = [...new Set(matches.map(m => m.ubicacion || 'Sin especificar'))];
+                        response = `He localizado **${matches.length}** ítems relacionados con "${rawWords.join(' ')}".<br>Se encuentran en: **${locs.join(', ')}**. 📍`;
+                    } else if (isStatus) {
+                        const buenos = matches.filter(m => m.estado === 'bueno').length;
+                        const regulares = matches.filter(m => m.estado === 'regular').length;
+                        const malos = matches.filter(m => m.estado === 'malo').length;
+                        response = `Sobre los **${matches.length}** ítems encontrados:<br>✅ ${buenos} en buen estado.<br>⚠️ ${regulares} regulares.<br>❌ ${malos} en mal estado.`;
+                    } else {
+                        response = `¡Análisis completado! 📦 Tenemos un total de **${matches.length}** ítems registrados que coinciden con "${rawWords.join(' ')}".`;
+                    }
                 } else {
-                    response = "Vaya, no he podido encontrar ítems con esa descripción exacta. ¿Podrías intentar con otras palabras? 🔍";
+                    response = `No he logrado encontrar ningún ítem que coincida con "${rawWords.join(' ')}". ¿Podrías revisar cómo está escrito en el inventario? 🔍`;
                 }
-            } else if (q.includes("donde") || q.includes("dónde") || q.includes("ubicacion") || q.includes("ubicación")) {
-                const cleanQuery = q.replace(/donde|dónde|está|esta|el|la|los|las|ubicacion|ubicación/g, "").trim();
-                const match = currentInventoryData.find(item => 
-                    item.codigo.toLowerCase().includes(cleanQuery) || 
-                    (item.descripcion || "").toLowerCase().includes(cleanQuery)
-                );
-                if (match) {
-                    response = `¡Lo encontré! El ítem **${match.descripcion}** (${match.codigo}) se encuentra en: **${match.ubicacion || 'una ubicación no especificada'}**. 📍`;
-                } else {
-                    response = "Mmm... no logro localizar ese ítem en los registros. ¿Me podrías dar el código o una descripción más clara? 🤔";
-                }
-            } else if (q.includes("hola") || q.includes("buenos dias") || q.includes("buenas tardes")) {
-                response = `¡Hola! Qué gusto saludarte. Estoy listo para ayudarte con el inventario. ¿Qué necesitas saber hoy? 😊`;
-            } else if (q.includes("gracias") || q.includes("ok")) {
-                response = `¡De nada! Aquí estaré si necesitas algo más. ¡Buen trabajo con el inventario! ✨`;
             } else {
-                response = "¡Entendido! Pero por ahora mi 'cerebro' solo sabe contar ítems (ej: '¿cuantos tramos hay?') o buscar dónde están guardados. ¿Probamos con eso? 🚀";
+                response = "¡Entendido! Puedo analizar cantidades, ubicaciones o estados. Intenta preguntarme: *'¿Cuántos pitones hay?'* o *'¿Dónde están las mangueras?'* 🚀";
             }
 
             setTimeout(() => {
                 typingDiv.remove();
                 addMessage(response, 'assistant');
-            }, 1000);
+            }, 800);
         }
 
         sendAi.addEventListener('click', () => {
