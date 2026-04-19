@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </td>
                 <td data-label="Próxima Rev.">
-                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''}>
+                    <input type="date" class="comment-input date-input-inline" id="next-rev-${item.id}" value="${item.proximaRevision || ''}" style="padding: 4px; font-size: 0.85rem; width: 130px;" ${item.revisado ? 'disabled' : ''} max="9999-12-31">
                 </td>
                 <td data-label="Revisión" class="action-column">
                     <div class="checkbox-wrapper">
