@@ -780,20 +780,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             aiMessages.scrollTop = aiMessages.scrollHeight;
         }
 
-        // Función para normalizar palabras (quitar acentos, y pasar a singular basico)
-        function normalizeWord(word) {
-            let w = word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            if (w.endsWith("es") && w.length > 4) {
-                w = w.slice(0, -2);
-            } else if (w.endsWith("s") && w.length > 3) {
-                w = w.slice(0, -1);
-            }
-            return w;
-        }
-
         async function processAiQuery(query) {
-            let response = "";
-
             // Mostrar "Analizando..."
             const typingDiv = document.createElement('div');
             typingDiv.className = 'ai-message assistant';
@@ -801,56 +788,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             aiMessages.appendChild(typingDiv);
             aiMessages.scrollTop = aiMessages.scrollHeight;
 
-            const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            
-            // Detectar intención
-            const isLocation = /donde|ubicacion|lugar|encuentra/.test(q);
-            const isStatus = /estado|condicion|mal|buen/.test(q);
-            // Por defecto asumimos que si no es lugar o estado, es contar (cuantos, etc)
-            
-            // Palabras clave ignorando palabras comunes
-            const stopWords = ['cuanto', 'cuantos', 'cantidad', 'donde', 'esta', 'estan', 'el', 'la', 'los', 'las', 'de', 'un', 'una', 'en', 'hay', 'es', 'son', 'que', 'estado', 'ubicacion', 'numero', 'total', 'para', 'con', 'por', 'sobre'];
-            const rawWords = q.split(/[\s,¿?]+/).filter(w => w.length > 2 && !stopWords.includes(w));
-            const searchTerms = rawWords.map(normalizeWord);
+            try {
+                // Preparamos los datos del inventario para la IA (minificados para ahorrar tokens)
+                const inventorySummary = currentInventoryData.map(i => ({
+                    c: i.codigo,
+                    d: i.descripcion,
+                    u: i.ubicacion || 'N/A',
+                    e: i.estado || 'N/A'
+                }));
 
-            if (q.includes("hola") || q.includes("buenos dias") || q.includes("buenas tardes")) {
-                response = `¡Hola! Qué gusto saludarte. Soy tu asistente de inventario. ¿Qué necesitas analizar hoy? 😊`;
-            } else if (q.includes("gracias") || q.includes("ok")) {
-                response = `¡Para servirte! Aquí estaré si necesitas consultar algo más. ✨`;
-            } else if (searchTerms.length > 0) {
-                // Filtrar items
-                const matches = currentInventoryData.filter(item => {
-                    const desc = normalizeWord(item.descripcion || "");
-                    const code = normalizeWord(item.codigo || "");
-                    const loc = normalizeWord(item.ubicacion || "");
-                    // Requiere que TODAS las palabras clave de búsqueda estén en la descripción, código o ubicación
-                    return searchTerms.every(term => desc.includes(term) || code.includes(term) || loc.includes(term));
+                const systemPrompt = `Eres un asistente experto en inventarios. Analiza la pregunta del usuario y responde de manera amigable, profesional y directa basándote EXCLUSIVAMENTE en el siguiente inventario (c=código, d=descripción, u=ubicación, e=estado): ${JSON.stringify(inventorySummary)}. 
+                Instrucciones: 
+                - Si el usuario te saluda, salúdalo amigablemente.
+                - Si te preguntan 'cuántos', cuenta los ítems en el inventario que coincidan (ten en cuenta plurales y singulares, ej: piton = pitones) y da el total.
+                - Si te preguntan dónde está algo, da su ubicación (u).
+                - Sé conciso, usa emojis, y usa un tono profesional.
+                - NO inventes datos. Si no hay, di que no encontraste nada.`;
+
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: query }
+                        ]
+                    })
                 });
 
-                if (matches.length > 0) {
-                    if (isLocation) {
-                        // Agrupar por ubicación
-                        const locs = [...new Set(matches.map(m => m.ubicacion || 'Sin especificar'))];
-                        response = `He localizado **${matches.length}** ítems relacionados con "${rawWords.join(' ')}".<br>Se encuentran en: **${locs.join(', ')}**. 📍`;
-                    } else if (isStatus) {
-                        const buenos = matches.filter(m => m.estado === 'bueno').length;
-                        const regulares = matches.filter(m => m.estado === 'regular').length;
-                        const malos = matches.filter(m => m.estado === 'malo').length;
-                        response = `Sobre los **${matches.length}** ítems encontrados:<br>✅ ${buenos} en buen estado.<br>⚠️ ${regulares} regulares.<br>❌ ${malos} en mal estado.`;
-                    } else {
-                        response = `¡Análisis completado! 📦 Tenemos un total de **${matches.length}** ítems registrados que coinciden con "${rawWords.join(' ')}".`;
-                    }
-                } else {
-                    response = `No he logrado encontrar ningún ítem que coincida con "${rawWords.join(' ')}". ¿Podrías revisar cómo está escrito en el inventario? 🔍`;
-                }
-            } else {
-                response = "¡Entendido! Puedo analizar cantidades, ubicaciones o estados. Intenta preguntarme: *'¿Cuántos pitones hay?'* o *'¿Dónde están las mangueras?'* 🚀";
-            }
-
-            setTimeout(() => {
+                if (!response.ok) throw new Error('Error en la API de IA');
+                
+                const aiResponseText = await response.text();
+                
                 typingDiv.remove();
-                addMessage(response, 'assistant');
-            }, 800);
+                // Reemplazamos saltos de linea con <br> para HTML
+                addMessage(aiResponseText.replace(/\n/g, '<br>'), 'assistant');
+
+            } catch (error) {
+                console.error("Error AI:", error);
+                typingDiv.remove();
+                addMessage("Lo siento, mis servidores de inteligencia artificial están un poco saturados ahora mismo. Intenta de nuevo en unos segundos. 🤖🔌", 'assistant');
+            }
         }
 
         sendAi.addEventListener('click', () => {
