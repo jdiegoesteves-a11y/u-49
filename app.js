@@ -877,16 +877,78 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const qNorm = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+            // ─── FIREFIGHTER SYNONYM DICTIONARY ──────────────────────────────
+            // Maps what users SAY → what to SEARCH in the inventory
+            const SYNONYMS = {
+                // Hose & water equipment
+                'tramo':        ['tramo'],
+                'manguera':     ['manguera','tramo'],
+                'piton':        ['piton'],
+                'lanza':        ['piton','lanza'],
+                'pitones':      ['piton'],
+                'nozzle':       ['piton'],
+                // Breathing
+                'scba':         ['equipo de respiracion','scba','msn','msa'],
+                'mascarilla':   ['mascarilla','mascara'],
+                'oxigeno':      ['oxigeno','respiracion'],
+                'cilindro':     ['cilindro','tanque'],
+                'tanque':       ['cilindro','tanque'],
+                // Rescue tools
+                'hacha':        ['hacha'],
+                'destral':      ['hacha','destral'],
+                'palanca':      ['palanca','barreta'],
+                'barreta':      ['barreta','palanca'],
+                'cizalla':      ['cizalla'],
+                'excarcelador': ['excarcelador','hidraulico'],
+                'hidraulico':   ['hidraulico'],
+                // Ladders
+                'escalera':     ['escalera'],
+                'escala':       ['escalera'],
+                // PPE
+                'casco':        ['casco'],
+                'guante':       ['guante'],
+                'bota':         ['bota'],
+                'chaqueton':    ['chaqueton','chaqueta'],
+                'pantalon':     ['pantalon'],
+                'capucha':      ['capucha'],
+                // Electrical/lights
+                'linterna':     ['linterna','lampara'],
+                'lampara':      ['lampara','linterna'],
+                'generador':    ['generador'],
+                'reflector':    ['reflector','lampara'],
+                // Vehicles/equipment
+                'motosierra':   ['motosierra','sierra'],
+                'motobomba':    ['motobomba','bomba'],
+                'extintor':     ['extintor','extinguidor'],
+                'extinguidor':  ['extintor','extinguidor'],
+                // Misc
+                'cuerda':       ['cuerda','linea de vida','soga'],
+                'soga':         ['soga','cuerda'],
+                'radio':        ['radio'],
+                'comunicacion': ['radio','comunicacion'],
+                'kit':          ['kit','bolsa','maletín'],
+                'botiquin':     ['botiquin','primeros auxilios'],
+                'camilla':      ['camilla'],
+                'driver':       ['driver','sirena'],
+                'sirena':       ['sirena','driver'],
+            };
+
+            // Apply synonyms: expand keywords with alternative search terms
+            function expandWithSynonyms(word) {
+                return SYNONYMS[word] || [word];
+            }
+
             // ─── INTENT DETECTION (FIRST PRIORITY — before any keyword work) ──
-            // These patterns capture what the user WANTS TO DO, not what to search.
             const INTENTS = {
-                download_pdf:    /descarg|pdf|reporte|imprim/.test(qNorm),
-                download_excel:  /excel|xls/.test(qNorm),
-                show_table:      /muestr|mostr|list|tabla|ven|visualiz|enseñ/.test(qNorm),
-                classify:        /clasific|agrup|organiz|orden|diferenci|tipos?\s+de|cuales?\s+(son|tipo)|distint/.test(qNorm),
-                analyze:         /analiz|compar|cuentalos|promedio|estadistic|resumen/.test(qNorm),
-                affirm:          /^(si|sí|claro|dale|por supuesto|ok|hazlo|genera|porfa|por favor|yes|adelante|positivo)/.test(qNorm),
-                greet:           /^(hola|buenas|saludos|hey|buenos)/.test(qNorm),
+                download_pdf:   /\bpdf\b|descarg.*pdf|reporte|imprim|export.*pdf/.test(qNorm),
+                download_excel: /\bexcel\b|\bxls\b|descarg.*excel|export.*excel/.test(qNorm),
+                show_table:     /\b(muestr|mostr|enseñ|tabla|ver\s+lista|ver\s+todo|visualiz)/.test(qNorm),
+                classify:       /clasific|subcategor|subgenero|subtipo|agrup|organiz|tipos?\s+de|cuales?\s+(son|tipo|hay)|diferent|distint|variedad|variant|separa|desglos/.test(qNorm),
+                analyze:        /analiz|compar|cuentalos|estadistic|resumen|informe|promedio/.test(qNorm),
+                affirm:         /^(si[^\w]|sí|claro|dale|por supuesto|ok|hazlo|genera|si$|adelante|positivo|correcto|exacto|afirmativo|bueno)/.test(qNorm),
+                greet:          /^(hola|buenas|saludos|hey|buenos|hi\b)/.test(qNorm),
+                status:         /\b(estado|condicion|funciona|malo|bueno|daña|roto|bien|operativ)/.test(qNorm),
+                location:       /\b(donde|ubicacion|estan|se encuentra|lugar|sitio|sector)/.test(qNorm),
             };
 
             // Affirmative after asking for report → trigger PDF
@@ -897,33 +959,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ─── KEYWORD EXTRACTION (only meaningful inventory terms) ────────
-            // These stop-words are stored as NORMALIZED (post-norm()) strings so the stripping bug is fixed.
+            // ─── KEYWORD EXTRACTION ───────────────────────────────────────────
             const stopWordsNorm = new Set([
-                // conversational
-                'hola','saludo','si','no','clar','ok','gracia',
-                // question/quantity words
-                'cuant','cuanta','cuanto','donde','hay','que','como','cual','quien',
-                // articles/prepositions
-                'de','el','la','lo','le','los','las','un','una','al','del','en','por','para','con','sin','a',
+                // conversational filler
+                'hola','saludo','si','no','clar','ok','gracia','porfa','favor','please',
+                // question words
+                'cuant','cuanta','cuanto','cuantos','donde','hay','que','como','cual','quien','cuando','porque',
+                // articles / prepositions
+                'de','el','la','lo','le','los','las','un','una','al','del','en','por','para','con','sin','a','y','o','ni','pero',
                 // action verbs (intent handled above)
                 'clasific','clasifica','clasifical','agrup','agrupa','grupalo','organiz','analiz','compar',
                 'diferenci','diferencia','mostr','muestr','mostram','muestra','lista','listar','ver','verl',
                 'descarg','descarga','descargal','descargalo','descargala','genera','imprim','hazlo',
-                'dame','dim','pon','quier','quiero',
-                // misc
-                'total','cantidad','tipo','tipos','tip','clas','clase','son','e','me','mi','tu','su',
-                'este','esta','tengo','tien','tiene','hay','ali','aqui','alla','nada','todo','toda','sol'
+                'dame','dim','pon','quier','quiero','necesit','busco','buscam',
+                'enseñ','visualiz','export','export',
+                // misc fillers
+                'total','cantidad','tip','son','e','me','mi','tu','su',
+                'este','esta','tengo','tien','tiene','ali','aqui','alla','nada','todo','toda','sol',
+                'favor','porfavor','dime','deme','digame','tenemos','tienen','cuales','cuales'
             ]);
 
             // Allow single digits (e.g. '2') and fractions (e.g. '1/2') through
             const rawWords = qNorm.split(/[\s¿?.,!;:"]+/).filter(w => w.length >= 2 || /^\d+$/.test(w));
-            const keywords = rawWords.map(norm).filter(w => w.length >= 1 && !stopWordsNorm.has(w));
+            const baseKeywords = rawWords.map(norm).filter(w => w.length >= 1 && !stopWordsNorm.has(w));
 
-            console.log("Intent:", JSON.stringify(INTENTS), "| Keywords:", keywords);
+            // Expand with synonyms for richer matching
+            const keywords = [];
+            const expandedSets = [];
+            baseKeywords.forEach(kw => {
+                const expanded = expandWithSynonyms(kw);
+                expanded.forEach(e => { if (!keywords.includes(e)) keywords.push(e); });
+                expandedSets.push(expanded);
+            });
 
-            // ─── SEARCH (only if we have real inventory keywords) ────────────
-            // For numeric keywords use word-boundary matching so '2' doesn't match inside '1/2'
+            console.log("Intent:", JSON.stringify(INTENTS), "| BaseKw:", baseKeywords, "| Expanded:", keywords);
+
+            // ─── SEARCH ──────────────────────────────────────────────────────
+            // For numeric keywords, use word-boundary regex so '2' ≠ inside '1/2'
             function kwMatches(text, kw) {
                 if (/^[\d\/]+$/.test(kw)) {
                     return new RegExp(`(^|[^\\d\/])${kw.replace(/\//g,'\\/')}([^\\d\/]|$)`).test(text);
@@ -934,26 +1006,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             let matchedItems = [];
             const isAnalyticalQuery = INTENTS.classify || INTENTS.analyze;
 
-            if (keywords.length > 0 && !isAnalyticalQuery) {
+            if (baseKeywords.length > 0 && !isAnalyticalQuery) {
+                // Strategy 1: AND across all expanded keyword groups (most precise)
                 matchedItems = currentInventoryData.filter(item => {
                     const desc = norm(item.descripcion);
                     const cod  = norm(item.codigo);
                     const loc  = norm(item.ubicacion);
-                    return keywords.every(kw => kwMatches(desc, kw) || kwMatches(cod, kw) || kwMatches(loc, kw));
+                    // Each original keyword must match (using any of its synonyms)
+                    return expandedSets.every(group =>
+                        group.some(kw => kwMatches(desc, kw) || kwMatches(cod, kw) || kwMatches(loc, kw))
+                    );
                 });
+
+                // Strategy 2: OR fallback using first keyword if AND returns nothing
+                if (matchedItems.length === 0 && baseKeywords.length > 0) {
+                    const firstExpanded = expandWithSynonyms(baseKeywords[0]);
+                    matchedItems = currentInventoryData.filter(item => {
+                        const desc = norm(item.descripcion);
+                        const cod  = norm(item.codigo);
+                        const loc  = norm(item.ubicacion);
+                        return firstExpanded.some(kw => kwMatches(desc, kw) || kwMatches(cod, kw) || kwMatches(loc, kw));
+                    });
+                    console.log("OR-fallback search used.");
+                }
+
                 if (matchedItems.length > 0) {
                     lastMatchedItems = matchedItems;
-                    lastKeywords = keywords;
+                    lastKeywords = baseKeywords;
                 }
             }
 
             // ─── CONTEXT RETENTION ENGINE ─────────────────────────────────────
-            // If no new results, check if the user is still talking about the previous topic.
             const needsContext = matchedItems.length === 0 && lastMatchedItems.length > 0;
             if (needsContext) {
                 const queryMentionsPrevTopic = lastKeywords.some(kw => qNorm.includes(kw));
                 const isFollowUp = INTENTS.classify || INTENTS.analyze || INTENTS.download_pdf ||
                     INTENTS.download_excel || INTENTS.show_table || INTENTS.affirm ||
+                    INTENTS.status || INTENTS.location ||
                     queryMentionsPrevTopic || query.trim().length < 12;
                 if (isFollowUp) {
                     matchedItems = lastMatchedItems;
@@ -961,8 +1050,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ─── FACTS GENERATION (structured data for the AI) ───────────────
-            const kwStr     = (keywords.length > 0 && !isAnalyticalQuery) ? keywords.join(' ') : lastKeywords.join(' ');
+            // ─── FACTS GENERATION ─────────────────────────────────────────────
+            const kwStr      = (baseKeywords.length > 0 && !isAnalyticalQuery) ? baseKeywords.join(' ') : lastKeywords.join(' ');
             const filterTerm = kwStr.split(' ')[0] || '';
             let factsText = "";
             if (matchedItems.length > 0) {
@@ -977,17 +1066,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ─── LOCAL INTELLIGENCE ENGINE (Primary — no cloud needed) ────────
+            // ─── LOCAL INTELLIGENCE ENGINE ────────────────────────────────────
             function buildLocalResponse(items, intent, kwStr, query) {
                 if (items.length === 0) {
-                    if (intent.greet) return `¡Hola ${inventariador || 'Bombero'}! 👋 Soy el Cerebro Logístico U-51. Puedo buscar ítems, darte estadísticas, clasificar equipos y generar reportes. ¿Qué necesitas? 🚒`;
-                    return null; // No local response possible without items
+                    if (intent.greet) {
+                        const cats = [...new Set(currentInventoryData.map(i => (i.descripcion||'').split(' ')[0]))].slice(0,8).join(', ');
+                        return `¡Hola ${inventariador || 'Bombero'}! 👋 Soy el Cerebro Logístico U-51.\n\nPuedo ayudarte con:\n  🔍 Búsquedas: "cuántos pitones hay", "busca escaleras"\n  📊 Análisis: "clasifica los tramos", "analiza el inventario"\n  📄 Reportes: "descarga el PDF", "exportar Excel"\n  🗺️ Ubicaciones: "dónde están los cascos"\n\nEquipos disponibles en esta unidad: ${cats}... ¿Qué necesitas? 🚒`;
+                    }
+                    return null;
                 }
 
                 const locs   = [...new Set(items.map(i => i.ubicacion || 'Sin ubicación'))];
                 const buenos = items.filter(i => (i.estado||'').toLowerCase().includes('bueno')).length;
                 const malos  = items.filter(i => (i.estado||'').toLowerCase().includes('malo')).length;
                 const marcas = [...new Set(items.map(i => i.marca || 'N/A'))];
+
+                // Group by exact description (used in multiple paths)
+                const byDesc = {};
+                items.forEach(i => { byDesc[i.descripcion] = (byDesc[i.descripcion]||0)+1; });
+                const uniqueTypes = Object.keys(byDesc).length;
 
                 // ── CLASSIFY: Group by brand/type ─────────────────────────────
                 if (intent.classify) {
@@ -1026,10 +1123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // ── DEFAULT: Sub-genre grouping ───────────────────────────────
-                // Group by exact description to show sub-categories (e.g. TRAMO 2½", TRAMO 1½")
-                const byDesc = {};
-                items.forEach(i => { byDesc[i.descripcion] = (byDesc[i.descripcion]||0)+1; });
-                const uniqueTypes = Object.keys(byDesc).length;
+                // byDesc and uniqueTypes are already computed above
 
                 if (uniqueTypes === 1) {
                     // All same type — simple answer
