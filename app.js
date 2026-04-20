@@ -906,11 +906,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Context follow-up for "where", "how many", "status", etc.
-            const isFollowUp = /donde|estan|cuanto|cuanta|cantidad|estado|como estan|quien/.test(qNorm);
+            const isFollowUp = /donde|estan|cuanto|cuanta|cantidad|estado|como estan|quien|ubicacion|donde se encuentran|que tal/.test(qNorm);
             const isActionOnly = (isShowAction || isPDF || isExcel);
             
-            if ((isFollowUp || isActionOnly) && keywords.length === 0 && lastMatchedItems.length > 0) {
+            // If it's a follow-up and we have context, keep the context
+            if (keywords.length === 0 && lastMatchedItems.length > 0 && (isFollowUp || isActionOnly || query.length < 15)) {
                 matchedItems = lastMatchedItems;
+                console.log("Using lastMatchedItems as context for follow-up.");
             }
 
             // 3. PRE-PROCESS FACTS (Deterministic Intelligence)
@@ -920,31 +922,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (matchedItems.length > 0) {
                 const locs = [...new Set(matchedItems.map(i => i.ubicacion || 'Sin especificar'))];
                 const buenos = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('bueno')).length;
-                factsText = `Contexto actual (${kwStr}): Encontré ${matchedItems.length} ítems. Ubicaciones: ${locs.join(', ')}. Estado: ${buenos} buenos.`;
+                factsText = `Encontré ${matchedItems.length} ítems de "${kwStr}". Están en: ${locs.join(', ')}. Estado: ${buenos} buenos.`;
             }
 
-            // 4. CONVERSATIONAL LAYER
+            // 4. CONVERSATIONAL LAYER (Advanced Brain)
             try {
                 const inventorySummary = `Total ítems: ${currentInventoryData.length}. Unidad: ${currentUnit}. Inventariador: ${inventariador || 'Bombero'}.`;
                 
-                // Add context facts to prompt even if no new items found this turn
-                const contextFacts = factsText || (lastMatchedItems.length > 0 ? `Anteriormente hablamos de ${lastMatchedItems.length} ítems de "${lastKeywords.join(' ')}".` : "");
+                // CRITICAL: We ALWAYS pass the best available facts to the AI
+                const currentFacts = factsText || (lastMatchedItems.length > 0 ? `Contexto anterior: ${lastMatchedItems.length} ítems de "${lastKeywords.join(' ')}".` : "");
 
-                const systemPrompt = `Eres el Asistente Inteligente de la Estación U-51. 
-                RESUMEN: ${inventorySummary}. 
-                CONTEXTO DE DATOS: ${contextFacts}
-                REGLAS:
-                - Responde de forma profesional y usa los datos del CONTEXTO DE DATOS para responder preguntas de seguimiento (ej: "donde estan", "cuantos hay").
-                - Si el usuario te saluda, dile "¡Hola ${inventariador}!".
-                - Usa emojis bomberiles. 🚒
-                - NUNCA menciones APIs ni errores.
-                - RESPUESTA CORTA Y ÚTIL.`;
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const systemPrompt = `Eres el Asistente Inteligente U-51. Eres un experto en inventario y logística de Bomberos.
+                INVENTARIO ACTUAL: ${inventorySummary}.
+                DATOS DE BÚSQUEDA: ${currentFacts}
+                
+                TU MISIÓN:
+                1. Responde SIEMPRE de forma profesional y con mucha iniciativa.
+                2. Si el usuario pregunta "dónde" o "cuántos" y tienes DATOS DE BÚSQUEDA, dáselos con precisión.
+                3. Usa emojis bomberiles (🚒, 🚨, 👨–👨‍🚒).
+                4. Si el usuario te saluda o charla, responde con carisma pero mantente enfocado en el inventario.
+                5. NUNCA digas "no tengo información" si tienes DATOS DE BÚSQUEDA arriba.
+                6. Sé breve, útil y eficiente.`;
 
                 chatHistory.push({ role: 'user', content: query });
-                if (chatHistory.length > 15) chatHistory.shift();
+                if (chatHistory.length > 20) chatHistory.shift();
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
 
                 const response = await fetch('https://text.pollinations.ai/', {
                     method: 'POST',
@@ -963,18 +967,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!response.ok) throw new Error("API Error");
 
                 let rawText = await response.text();
-                
-                // Aggressive cleaning of warnings
                 let cleanText = rawText.replace(/⚠️[\s\S]*?normally\./gi, '').trim();
                 
-                // If AI is empty or weird, use local facts directly
-                if (!cleanText || cleanText.length < 5) {
-                    cleanText = factsText ? `¡Hola! Aquí tienes la información: ${factsText}` : "No he encontrado información sobre eso. ¿Deseas buscar otra cosa?";
+                // INTELIGENCIA DE SEGURIDAD: Si la IA falla en dar los datos, se los inyectamos nosotros
+                if (factsText && (!cleanText || cleanText.toLowerCase().includes("no tengo información") || cleanText.toLowerCase().includes("no encontré"))) {
+                    cleanText = `¡Claro! Tengo la información aquí: ${factsText} ¿Qué más deseas saber? 🚒`;
+                }
+
+                if (!cleanText || cleanText.length < 2) {
+                    cleanText = factsText || "¡Hola! Estoy listo para ayudarte con el inventario. ¿Qué buscas hoy? 🚒";
                 }
 
                 typingDiv.remove();
-                
-                // Save AI response to history for next turn
                 chatHistory.push({ role: 'assistant', content: cleanText });
                 
                 let actions = matchedItems.length > 0 ? [
@@ -990,10 +994,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) {
                 console.error("AI Error:", err);
                 typingDiv.remove();
-                const fallbackMsg = factsText || "🚒 Perdona, tengo problemas de conexión. ¿Puedes intentar de nuevo?";
-                addMessage(fallbackMsg, 'assistant');
+                const emergencyMsg = factsText ? `🚨 Mi enlace central está saturado, pero localmente veo esto: ${factsText}` : "🚒 Perdona, mi sistema de comunicación está en mantenimiento. ¿Podemos intentar con palabras clave?";
+                addMessage(emergencyMsg, 'assistant');
             }
-        }
+
+
 
         sendAi.addEventListener('click', () => {
             const text = aiInput.value.trim();
