@@ -1228,7 +1228,8 @@ INSTRUCCIONES ABSOLUTAS:
                                 { role: 'system', content: systemPrompt },
                                 ...chatHistory
                             ],
-                            model: 'openai'
+                            model: 'openai',
+                            private: true
                         }),
                         signal: controller.signal
                     });
@@ -1236,9 +1237,21 @@ INSTRUCCIONES ABSOLUTAS:
 
                     if (response.ok) {
                         const rawText   = await response.text();
-                        const cloudText = rawText.replace(/⚠️[\s\S]*?normally\./gi, '').trim();
-                        // Only use cloud response if it's actually meaningful
-                        if (cloudText && cloudText.length > 20 && !cloudText.toLowerCase().includes('no tengo información')) {
+                        // Aggressively strip Pollinations ads and spam
+                        const cloudText = rawText
+                            .replace(/⚠️[\s\S]*?normally\./gi, '')
+                            .replace(/---[\s\S]*?Support Pollinations[\s\S]*$/gi, '')
+                            .replace(/\*\*Support Pollinations[\s\S]*/gi, '')
+                            .replace(/\*\*Ad\*\*[\s\S]*/gi, '')
+                            .replace(/🌸[\s\S]*?pollinations[\s\S]*/gi, '')
+                            .replace(/Powered by Pollinations[\s\S]*/gi, '')
+                            .replace(/\[Support our mission\][\s\S]*/gi, '')
+                            .replace(/pollinations\.ai[\s\S]*/gi, '')
+                            .trim();
+                        // Only use cloud response if it's meaningful and clean
+                        if (cloudText && cloudText.length > 20 
+                            && !cloudText.toLowerCase().includes('no tengo información')
+                            && !cloudText.toLowerCase().includes('pollinations')) {
                             finalText = cloudText;
                         }
                     }
@@ -1291,7 +1304,22 @@ INSTRUCCIONES ABSOLUTAS:
             if (!text) return;
             addMessage(text, 'user');
             aiInput.value = '';
-            processAiQuery(text);
+
+            // ─── MULTI-QUERY SUPPORT ───────────────────────────────────
+            // Split on ' y ' conjunction to handle compound questions
+            // e.g. "cuantos tramos hay y que tipo de pitones" → 2 queries
+            const subQueries = text.split(/\s+y\s+(?=(?:cuant|que|donde|como|cual|tipo|clasific|muestr|descarg|analiz))/i).map(s => s.trim()).filter(Boolean);
+            
+            if (subQueries.length > 1) {
+                // Process each sub-query sequentially
+                (async () => {
+                    for (const sq of subQueries) {
+                        await processAiQuery(sq);
+                    }
+                })();
+            } else {
+                processAiQuery(text);
+            }
         });
 
         aiInput.addEventListener('keypress', (e) => {
