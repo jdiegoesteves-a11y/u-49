@@ -884,8 +884,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isExcel      = /\bexcel\b|\bxls\b/.test(qNorm);
             
             // Extract Keywords
-            const words = qNorm.split(/[\s¿?.,!]+/).filter(w => w.length > 2);
-            const keywords = words.map(norm).filter(w => !stopWords.has(w));
+            const words = qNorm.split(/[\s¿?.,!]+/).filter(w => w.length >= 1); // Permite números como "2"
+            const keywords = words.map(norm).filter(w => w.length > 0 && !stopWords.has(w));
 
             console.log("Keywords extracted:", keywords);
 
@@ -896,7 +896,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const desc = norm(item.descripcion);
                     const cod  = norm(item.codigo);
                     const loc  = norm(item.ubicacion);
-                    return keywords.some(kw => desc.includes(kw) || cod.includes(kw) || loc.includes(kw));
+                    // Búsqueda más precisa: todos los keywords deben estar presentes (AND logic)
+                    return keywords.every(kw => desc.includes(kw) || cod.includes(kw) || loc.includes(kw));
                 });
                 if (matchedItems.length > 0) {
                     lastMatchedItems = matchedItems;
