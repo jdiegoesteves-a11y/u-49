@@ -853,14 +853,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         async function processAiQuery(query) {
+            console.log("AI Query received:", query);
             const typingDiv = document.createElement('div');
             typingDiv.className = 'ai-message assistant';
             typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-            if (aiMessages.style.maxHeight === '0px' || !aiMessages.style.maxHeight) {
-                aiMessages.style.padding = '1.5rem';
-                aiMessages.style.maxHeight = '500px';
-                aiMessages.style.overflowY = 'auto';
-            }
+            
+            // Expand messages area if closed
+            aiMessages.style.padding = '1.5rem';
+            aiMessages.style.maxHeight = '500px';
+            aiMessages.style.overflowY = 'auto';
+            
             aiMessages.appendChild(typingDiv);
             aiMessages.scrollTop = aiMessages.scrollHeight;
 
@@ -872,108 +874,109 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             function norm(str) {
                 let s = (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                // Basic plural to singular
                 if (s.endsWith("es") && s.length > 4) s = s.slice(0, -2);
                 else if (s.endsWith("s") && s.length > 3) s = s.slice(0, -1);
                 return s;
             }
 
-            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','donde','hay','de','el','la','los','las','un','una','que','en','esta','estan','son','es','me','mi','tu','su','como','cual','tienen','cuales','tengo','tiene','total','cantidad','muestramelo','muestrame','mostrar','muestra','descarga','descargar','pdf','excel','quiero','ver','lista','listar','dame','dime']);
+            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','donde','hay','de','el','la','los','las','un','una','que','en','esta','estan','son','es','me','mi','tu','su','como','cual','tienen','cuales','tengo','tiene','total','cantidad','muestramelo','muestrame','mostrar','muestra','descarga','descargar','pdf','excel','quiero','ver','lista','listar','dame','dime','solo','nada','todos','todas','del','al','por','para','con','sin','hya','hay','aqui','alla','este','esta']);
             const qNorm = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-            // ── DETECTAR COMANDOS DE SEGUIMIENTO (muéstramelo, descárgalo, etc.) ──
-            const isFollowUp = /muestram|mostram|listam|visualiz|filtr|ponm|verl|quiero ver|screen|tabla/.test(qNorm);
-            const wantsPDF  = /pdf|descargar pdf|baja pdf/.test(qNorm);
-            const wantsExcel = /excel|xls|descargar excel|baja excel/.test(qNorm);
+            // Action detection
+            const isShowAction = /muestram|mostram|listam|visualiz|filtr|ponm|verl|quiero ver|tabla|enseñam/.test(qNorm);
+            const isPDF        = /\bpdf\b/.test(qNorm);
+            const isExcel      = /\bexcel\b|\bxls\b/.test(qNorm);
+            const wantsCount   = /cuanto|cuantos|cantidad|total|numero/.test(qNorm);
+            const wantsLocation= /donde|ubicacion|lugar|encuentra/.test(qNorm);
+            const wantsStatus  = /estado|condicion|mal|regular|buen/.test(qNorm);
 
-            if ((isFollowUp || wantsPDF || wantsExcel) && lastMatchedItems.length > 0) {
-                const kw = lastKeywords.join(' ');
-                typingDiv.remove();
-                if (wantsPDF) {
-                    await downloadFilteredPDF(lastMatchedItems, kw);
-                } else if (wantsExcel) {
-                    downloadFilteredExcel(lastMatchedItems, kw);
-                } else {
-                    // Filtrar tabla
-                    filterTableWith(lastKeywords[0] || kw);
-                    addMessage(`📋 He filtrado la tabla para mostrar solo los <strong>${lastMatchedItems.length}</strong> ítems de "<strong>${kw}</strong>". ¡Échalos un vistazo abajo! 👇`, 'assistant', [
-                        { label: '🔄 Ver todo', handler: () => { filterTableWith(''); addMessage('Se ha limpiado el filtro. Mostrando todo el inventario. 📋', 'assistant'); } },
-                        { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(lastMatchedItems, kw) },
-                        { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(lastMatchedItems, kw) }
-                    ]);
+            // Item keywords (words that are not stop words)
+            const words = qNorm.split(/[\s¿?.,!]+/).filter(w => w.length > 2);
+            const keywords = words.map(norm).filter(w => !stopWords.has(w));
+
+            console.log("Keywords extracted:", keywords);
+
+            // 1. Search for items if keywords are present
+            let matchedItems = [];
+            if (keywords.length > 0) {
+                matchedItems = currentInventoryData.filter(item => {
+                    const desc = norm(item.descripcion);
+                    const cod  = norm(item.codigo);
+                    const loc  = norm(item.ubicacion);
+                    // Match if any keyword is found in desc, code or location
+                    return keywords.some(kw => desc.includes(kw) || cod.includes(kw) || loc.includes(kw));
+                });
+
+                if (matchedItems.length > 0) {
+                    // Update context
+                    lastMatchedItems = matchedItems;
+                    lastKeywords = keywords;
                 }
-                return;
             }
 
-            // ── DETECTAR INTENCIÓN ──
-            const wantsCount    = /cuanto|cuantos|cantidad|total|numero/.test(qNorm);
-            const wantsLocation = /donde|ubicacion|lugar|encuentra/.test(qNorm);
-            const wantsStatus   = /estado|condicion|mal|regular|buen/.test(qNorm);
-            const wantsShow     = /muestra|lista|ver|visualiz|filtr|tabla/.test(qNorm) || wantsPDF || wantsExcel;
-
-            const keywords = qNorm.split(/[\s¿?.,!]+/).map(norm).filter(w => w.length > 2 && !stopWords.has(w));
-
-            const matchedItems = currentInventoryData.filter(item => {
-                const desc = norm(item.descripcion);
-                const cod  = norm(item.codigo);
-                const loc  = norm(item.ubicacion);
-                return keywords.some(kw => desc.includes(kw) || cod.includes(kw) || loc.includes(kw));
-            });
-
-            // Guardar contexto para seguimiento
-            if (keywords.length > 0 && matchedItems.length > 0) {
-                lastMatchedItems = matchedItems;
-                lastKeywords = keywords;
+            // 2. If it's an action-only query (e.g., "muéstramelos"), use last context
+            const isActionOnly = (isShowAction || isPDF || isExcel) && keywords.length === 0;
+            if (isActionOnly && lastMatchedItems.length > 0) {
+                matchedItems = lastMatchedItems;
+                console.log("Using context items:", matchedItems.length);
             }
 
             typingDiv.remove();
 
-            if (keywords.length === 0) {
-                addMessage("¡Hola! Puedo ayudarte a 🔢 contar, 📍 ubicar, 📊 ver estado, 📋 filtrar la tabla o 📄 descargar PDF/Excel de cualquier ítem. ¿Qué quieres saber?", 'assistant');
+            // 3. Handle cases
+            
+            // Greetings or help
+            if (/hola|buenos|buenas|saludo|ayuda/.test(qNorm) && keywords.length === 0) {
+                addMessage("¡Hola! 😊 Soy tu asistente inteligente. Puedo 🔢 contar, 📍 ubicar, 📊 ver estados, 📋 filtrar la tabla o 📄 descargar PDF/Excel de lo que busques. ¿En qué te ayudo?", 'assistant');
                 return;
             }
 
             if (matchedItems.length === 0) {
-                addMessage(`No encontré ningún ítem que coincida con "<strong>${keywords.join(', ')}</strong>". 🔍 Verifica cómo aparece en la lista.`, 'assistant');
+                if (keywords.length === 0) {
+                    addMessage("No entendí qué ítem buscas. Prueba algo como: <i>'¿Cuántos pitones hay?'</i> o <i>'Descarga PDF de mangueras'</i>. 🚒", 'assistant');
+                } else {
+                    addMessage(`No encontré ítems que coincidan con "<strong>${keywords.join(', ')}</strong>". 🔍 Verifica el nombre o código.`, 'assistant');
+                }
                 return;
             }
 
-            const kw = keywords.join(' ');
+            const kwStr = (keywords.length > 0 ? keywords : lastKeywords).join(' ');
+            const filterTerm = (keywords.length > 0 ? keywords[0] : lastKeywords[0]);
 
-            if (wantsPDF) {
-                await downloadFilteredPDF(matchedItems, kw);
-            } else if (wantsExcel) {
-                downloadFilteredExcel(matchedItems, kw);
-            } else if (wantsShow) {
-                filterTableWith(keywords[0]);
-                addMessage(`📋 He filtrado la tabla para mostrar los <strong>${matchedItems.length}</strong> ítems de "<strong>${kw}</strong>". 👇`, 'assistant', [
-                    { label: '🔄 Ver todo', handler: () => { filterTableWith(''); addMessage('Filtro limpiado. Mostrando todo el inventario. 📋', 'assistant'); } },
-                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kw) },
-                    { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(matchedItems, kw) }
+            if (isPDF) {
+                await downloadFilteredPDF(matchedItems, kwStr);
+            } else if (isExcel) {
+                downloadFilteredExcel(matchedItems, kwStr);
+            } else if (isShowAction) {
+                filterTableWith(filterTerm);
+                addMessage(`📋 He filtrado la tabla para mostrar los <strong>${matchedItems.length}</strong> ítems de "<strong>${kwStr}</strong>".`, 'assistant', [
+                    { label: '🔄 Ver todo', handler: () => { filterTableWith(''); addMessage('Filtro limpiado. 📋', 'assistant'); } },
+                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kwStr) },
+                    { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(matchedItems, kwStr) }
                 ]);
             } else if (wantsCount) {
-                addMessage(`📦 Hay <strong>${matchedItems.length}</strong> ítem(s) de "<strong>${kw}</strong>" en el inventario.`, 'assistant', [
-                    { label: '📋 Mostrar en tabla', handler: () => { filterTableWith(keywords[0]); addMessage(`Filtrando tabla por "<strong>${kw}</strong>". 👇`, 'assistant'); } },
-                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kw) },
-                    { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(matchedItems, kw) }
+                addMessage(`📦 Hay <strong>${matchedItems.length}</strong> ítem(s) de "<strong>${kwStr}</strong>" en el inventario.`, 'assistant', [
+                    { label: '📋 Mostrar en tabla', handler: () => { filterTableWith(filterTerm); addMessage(`Filtrando por "${kwStr}"...`, 'assistant'); } },
+                    { label: '📄 PDF', handler: () => downloadFilteredPDF(matchedItems, kwStr) }
                 ]);
             } else if (wantsLocation) {
                 const locs = [...new Set(matchedItems.map(i => i.ubicacion || 'Sin especificar'))];
-                addMessage(`📍 Los <strong>${matchedItems.length}</strong> ítems de "<strong>${kw}</strong>" están en: <strong>${locs.join(', ')}</strong>.`, 'assistant', [
-                    { label: '📋 Mostrar en tabla', handler: () => { filterTableWith(keywords[0]); addMessage(`Filtrando tabla por "<strong>${kw}</strong>". 👇`, 'assistant'); } }
+                addMessage(`📍 Los <strong>${matchedItems.length}</strong> ítems de "<strong>${kwStr}</strong>" están en: <strong>${locs.join(', ')}</strong>.`, 'assistant', [
+                    { label: '📋 Mostrar en tabla', handler: () => filterTableWith(filterTerm) }
                 ]);
             } else if (wantsStatus) {
-                const buenos    = matchedItems.filter(i => (i.estado||'').toLowerCase() === 'bueno').length;
-                const regulares = matchedItems.filter(i => (i.estado||'').toLowerCase() === 'regular').length;
-                const malos     = matchedItems.filter(i => (i.estado||'').toLowerCase() === 'malo').length;
-                addMessage(`📊 Estado de <strong>${matchedItems.length}</strong> ítems de "<strong>${kw}</strong>":<br>✅ Buenos: ${buenos} &nbsp; ⚠️ Regulares: ${regulares} &nbsp; ❌ Malos: ${malos}`, 'assistant', [
-                    { label: '📋 Mostrar en tabla', handler: () => { filterTableWith(keywords[0]); addMessage(`Filtrando tabla por "<strong>${kw}</strong>". 👇`, 'assistant'); } }
+                const buenos = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('bueno')).length;
+                const regulares = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('regular')).length;
+                const malos = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('malo')).length;
+                addMessage(`📊 Estado de <strong>${matchedItems.length}</strong> ítems de "<strong>${kwStr}</strong>":<br>✅ Buenos: ${buenos} | ⚠️ Regulares: ${regulares} | ❌ Malos: ${malos}`, 'assistant', [
+                    { label: '📋 Ver en tabla', handler: () => filterTableWith(filterTerm) }
                 ]);
             } else {
-                // Respuesta general con botones de acción
-                addMessage(`Encontré <strong>${matchedItems.length}</strong> ítems relacionados con "<strong>${kw}</strong>". ¿Qué quieres hacer?`, 'assistant', [
-                    { label: '📋 Mostrar en tabla', handler: () => { filterTableWith(keywords[0]); addMessage(`Filtrando tabla por "<strong>${kw}</strong>". 👇`, 'assistant'); } },
-                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kw) },
-                    { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(matchedItems, kw) }
+                addMessage(`Encontré <strong>${matchedItems.length}</strong> ítems de "<strong>${kwStr}</strong>". ¿Qué deseas hacer?`, 'assistant', [
+                    { label: '📋 Mostrar en tabla', handler: () => filterTableWith(filterTerm) },
+                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kwStr) },
+                    { label: '📊 Descargar Excel', handler: () => downloadFilteredExcel(matchedItems, kwStr) }
                 ]);
             }
         }
