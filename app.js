@@ -908,28 +908,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const inventorySummary = `Total ítems: ${currentInventoryData.length}. Unidad: ${currentUnit}.`;
-                let facts = matchedItems.length > 0 ? `Encontrados ${matchedItems.length} ítems.` : "";
-                const systemPrompt = `Asistente de Bomberos (U-51). Breve, amable, profesional. RESUMEN: ${inventorySummary}. ${facts} REGLAS: Saluda, emojis bomberiles, preciso.`;
+                let factsText = "";
+                if (matchedItems.length > 0) {
+                    const locs = [...new Set(matchedItems.map(i => i.ubicacion || 'Sin especificar'))];
+                    const buenos = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('bueno')).length;
+                    factsText = `Encontré ${matchedItems.length} ítems de "${kwStr}". Ubicaciones: ${locs.join(', ')}. Estado: ${buenos} buenos.`;
+                }
+
+                // AI SYSTEM PROMPT - More intelligent and professional
+                const systemPrompt = `Eres el Asistente Inteligente de la Estación de Bomberos U-51.
+                Tu objetivo es ayudar al usuario (${inventariador || 'Bombero'}) con el inventario.
+                DATOS REALES DEL MOMENTO: ${inventorySummary}. ${factsText}
+                
+                REGLAS DE ORO:
+                1. Sé extremadamente profesional, amable y eficiente.
+                2. USA LOS DATOS REALES que te pasé para dar respuestas precisas.
+                3. Responde de forma conversacional (ej: "¡Hola ${inventariador}! He encontrado lo que buscas...").
+                4. Usa emojis de bomberos y emergencias (🚒, 👨‍🚒, 🧯, 🚨).
+                5. NUNCA menciones temas técnicos, APIs, ni el aviso de Pollinations.
+                6. Si no hay datos reales, sé honesto pero proactivo: "No encuentro eso específicamente, ¿quieres que busquemos por otra categoría?".
+                7. MANTÉN LA RESPUESTA BREVE Y AL PUNTO.`;
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(query)}?system=${encodeURIComponent(systemPrompt)}&model=openai`, { signal: controller.signal });
+                // Use the new clean method (POST with specific cleaning)
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: query }
+                        ],
+                        model: 'openai',
+                        cache: false
+                    }),
+                    signal: controller.signal
+                });
+                
                 clearTimeout(timeoutId);
-
                 if (!response.ok) throw new Error("API Error");
-                let aiResponseText = await response.text();
+
+                let rawText = await response.text();
+                console.log("Raw AI Response:", rawText);
+
+                // --- AGGRESSIVE CLEANER ---
+                // Removes the "IMPORTANT NOTICE" and any other Pollinations-specific metadata
+                let cleanText = rawText
+                    .replace(/⚠️[\s\S]*?normally\./gi, '') // Remove the specific warning
+                    .replace(/The Pollinations[\s\S]*?normally\./gi, '') // Double safety
+                    .replace(/\[MODELS\][\s\S]*?$/g, '') // Remove model list if appended
+                    .replace(/#+[\s\S]*?Normally/gi, '') // Remove markdown headers with the warning
+                    .trim();
+
+                // If the response is empty after cleaning, use a fallback
+                if (!cleanText || cleanText.length < 5) {
+                    cleanText = factsText ? `¡Hola! He procesado tu consulta. ${factsText} ¿Qué más deseas hacer?` : "¡Hola! Estoy listo para ayudarte con el inventario de la U-51. ¿Qué buscas hoy?";
+                }
+
                 typingDiv.remove();
                 
                 let actions = matchedItems.length > 0 ? [
-                    { label: '📋 Ver', handler: () => filterTableWith(filterTerm) },
-                    { label: '📄 PDF', handler: () => downloadFilteredPDF(matchedItems, kwStr) }
-                ] : [];
+                    { label: '📋 Mostrar en Tabla', handler: () => filterTableWith(filterTerm) },
+                    { label: '📄 Descargar PDF', handler: () => downloadFilteredPDF(matchedItems, kwStr) },
+                    { label: '📊 Excel', handler: () => downloadFilteredExcel(matchedItems, kwStr) }
+                ] : [
+                    { label: '🔄 Ver Todo', handler: () => filterTableWith('') }
+                ];
                 
-                addMessage(aiResponseText.replace(/\n/g, '<br>'), 'assistant', actions);
+                addMessage(cleanText.replace(/\n/g, '<br>'), 'assistant', actions);
+
             } catch (err) {
+                console.error("AI Error:", err);
                 typingDiv.remove();
-                addMessage("🚒 Perdona, tiempo de espera agotado. ¿Intentamos de nuevo?", 'assistant');
+                // Fallback deterministic intelligence
+                const fallbackMsg = factsText ? `He detectado un problema de red, pero mis registros locales muestran: ${factsText}` : "🚒 Perdona, mi sistema central está fuera de línea. ¿Puedes intentar con palabras clave como 'pitones' o 'mangueras'?";
+                addMessage(fallbackMsg, 'assistant');
             }
         }
 
