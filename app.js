@@ -997,6 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const emergencyMsg = factsText ? `🚨 Mi enlace central está saturado, pero localmente veo esto: ${factsText}` : "🚒 Perdona, mi sistema de comunicación está en mantenimiento. ¿Podemos intentar con palabras clave?";
                 addMessage(emergencyMsg, 'assistant');
             }
+        }
 
 
 
