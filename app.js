@@ -931,31 +931,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 4. CONVERSATIONAL LAYER (Using LLM with Local Facts)
             try {
-                // Prepare context for the AI
-                const inventorySummary = `Total ítems: ${currentInventoryData.length}. Unidad actual: ${currentUnit}. Inventariador: ${inventariador || 'Desconocido'}.`;
-                let facts = "";
-                if (matchedItems.length > 0) {
-                    const locs = [...new Set(matchedItems.map(i => i.ubicacion || 'Sin especificar'))];
-                    const buenos = matchedItems.filter(i => (i.estado||'').toLowerCase().includes('bueno')).length;
-                    facts = `SOBRE LA CONSULTA: Encontré ${matchedItems.length} ítems de "${kwStr}". Ubicaciones: ${locs.join(', ')}. Estado: ${buenos} buenos.`;
-                } else if (keywords.length > 0) {
-                    facts = `SOBRE LA CONSULTA: No encontré nada para "${keywords.join(', ')}". Sugiere revisar el nombre.`;
-                }
+                console.log("Fact-checking for AI...", facts || "No items found");
+                
+                const inventorySummary = `Total ítems: ${currentInventoryData.length}. Unidad actual: ${currentUnit}. Inventariador: ${inventariador || 'Bombero'}.`;
+                
+                const systemPrompt = `Eres un asistente de inventario de Bomberos (Estación U-51) de clase mundial.
+                Personalidad: Eficiente, inteligente, proactivo y muy profesional.
+                CONTEXTO: ${inventorySummary}.
+                ${facts ? "DATOS REALES ENCONTRADOS: " + facts : "No hay ítems específicos en esta consulta local."}
+                
+                INSTRUCCIONES:
+                1. Responde de forma natural y fluida. 
+                2. Si hay datos reales, úsalos para responder con precisión absoluta.
+                3. Si el usuario te saluda, sé cordial y menciónalo: "${inventariador || 'Bombero'}".
+                4. Usa emojis bomberiles (🚒, 🚒, 👨‍🚒, 🧯) de forma elegante.
+                5. Si no encontraste nada, sugiere buscar con palabras más simples o por código.
+                6. MANTÉN LA RESPUESTA BREVE Y ÚTIL. No divagues.
+                7. NUNCA menciones que eres una IA o limitaciones técnicas.`;
 
-                const systemPrompt = `Eres un asistente experto de inventario de Bomberos (Estación U-51). 
-                Eres amable, profesional y eficiente. 
-                RESUMEN: ${inventorySummary}. 
-                ${facts}
-                REGLAS:
-                - Responde de forma conversacional y natural.
-                - Si el usuario te saluda, salúdalo por su nombre (${inventariador || 'Bombero'}).
-                - Si encontraste ítems, menciona los datos que te pasé (cantidad, ubicación, estado).
-                - Mantén tus respuestas breves y con emojis bomberiles. 🚒👨‍🚒
-                - NO menciones avisos técnicos ni APIs.`;
-
-                // Add to history
                 chatHistory.push({ role: 'user', content: query });
-                if (chatHistory.length > 10) chatHistory.shift();
+                if (chatHistory.length > 12) chatHistory.shift();
 
                 const response = await fetch('https://text.pollinations.ai/', {
                     method: 'POST',
@@ -966,22 +961,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ...chatHistory
                         ],
                         model: 'openai',
-                        seed: 42
+                        jsonMode: false // We want text
                     })
                 });
 
-                if (!response.ok) throw new Error("AI Error");
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 
-                let aiText = await response.text();
-                // Strip Pollinations warnings
-                aiText = aiText.replace(/⚠️[\s\S]{0,500}normally\./g, '').trim();
+                let aiResponseText = await response.text();
                 
+                // Limpiar basura de la respuesta si existe
+                aiResponseText = aiResponseText.replace(/⚠️[\s\S]{0,500}normally\./g, '').trim();
+                
+                // Si la respuesta parece JSON (OpenAI format), extraer el contenido
+                if (aiResponseText.startsWith('{')) {
+                    try {
+                        const json = JSON.parse(aiResponseText);
+                        if (json.choices && json.choices[0] && json.choices[0].message) {
+                            aiResponseText = json.choices[0].message.content;
+                        } else if (json.content) {
+                            aiResponseText = json.content;
+                        }
+                    } catch (e) { console.warn("Not JSON after all"); }
+                }
+
                 typingDiv.remove();
+                chatHistory.push({ role: 'assistant', content: aiResponseText });
                 
-                // Add AI response to history
-                chatHistory.push({ role: 'assistant', content: aiText });
-                
-                // Final display with action buttons if items were found
                 let actions = [];
                 if (matchedItems.length > 0) {
                     actions = [
@@ -991,12 +996,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ];
                 }
                 
-                addMessage(aiText.replace(/\n/g, '<br>'), 'assistant', actions);
+                addMessage(aiResponseText.replace(/\n/g, '<br>'), 'assistant', actions);
 
             } catch (err) {
-                console.error(err);
+                console.error("AI Brain Error:", err);
                 typingDiv.remove();
-                addMessage("🚒 Lo siento, mi procesador conversacional está ocupado. Pero localmente te digo: " + (facts || "No encontré lo que buscas."), 'assistant');
+                const fallback = facts ? `Lo siento, hubo un problema de conexión, pero encontré esto: ${facts}` : "🚒 Perdona, mi sistema de comunicación está saturado. ¿Puedes intentarlo de nuevo en un momento?";
+                addMessage(fallback, 'assistant');
             }
         }
 
