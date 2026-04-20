@@ -916,12 +916,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'este','esta','tengo','tien','tiene','hay','ali','aqui','alla','nada','todo','toda','sol'
             ]);
 
-            const rawWords = qNorm.split(/[\s¿?.,!;:"]+/).filter(w => w.length >= 2);
-            const keywords = rawWords.map(norm).filter(w => w.length > 1 && !stopWordsNorm.has(w));
+            // Allow single digits (e.g. '2') and fractions (e.g. '1/2') through
+            const rawWords = qNorm.split(/[\s¿?.,!;:"]+/).filter(w => w.length >= 2 || /^\d+$/.test(w));
+            const keywords = rawWords.map(norm).filter(w => w.length >= 1 && !stopWordsNorm.has(w));
 
             console.log("Intent:", JSON.stringify(INTENTS), "| Keywords:", keywords);
 
             // ─── SEARCH (only if we have real inventory keywords) ────────────
+            // For numeric keywords use word-boundary matching so '2' doesn't match inside '1/2'
+            function kwMatches(text, kw) {
+                if (/^[\d\/]+$/.test(kw)) {
+                    return new RegExp(`(^|[^\\d\/])${kw.replace(/\//g,'\\/')}([^\\d\/]|$)`).test(text);
+                }
+                return text.includes(kw);
+            }
+
             let matchedItems = [];
             const isAnalyticalQuery = INTENTS.classify || INTENTS.analyze;
 
@@ -930,7 +939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const desc = norm(item.descripcion);
                     const cod  = norm(item.codigo);
                     const loc  = norm(item.ubicacion);
-                    return keywords.every(kw => desc.includes(kw) || cod.includes(kw) || loc.includes(kw));
+                    return keywords.every(kw => kwMatches(desc, kw) || kwMatches(cod, kw) || kwMatches(loc, kw));
                 });
                 if (matchedItems.length > 0) {
                     lastMatchedItems = matchedItems;
@@ -1016,11 +1025,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return `📍 Los ${items.length} ítems de "${kwStr}" están en: **${locs.join(', ')}**. Marcas presentes: ${marcas.join(', ')}. 🚒`;
                 }
 
-                // ── DEFAULT: Count + summary ──────────────────────────────────
+                // ── DEFAULT: Sub-genre grouping ───────────────────────────────
+                // Group by exact description to show sub-categories (e.g. TRAMO 2½", TRAMO 1½")
                 const byDesc = {};
                 items.forEach(i => { byDesc[i.descripcion] = (byDesc[i.descripcion]||0)+1; });
-                const topItems = Object.entries(byDesc).slice(0, 4).map(([d,n]) => `${n}x ${d}`).join(', ');
-                return `🚒 Encontré **${items.length} ítems** de "${kwStr}" en ${locs.join(', ')}.\nPrincipales: ${topItems}${Object.keys(byDesc).length > 4 ? '...' : '.'}\nMarcas: ${marcas.join(', ')}. Estado: ${buenos} buenos, ${malos} malos, ${items.length-buenos-malos} sin datos.`;
+                const uniqueTypes = Object.keys(byDesc).length;
+
+                if (uniqueTypes === 1) {
+                    // All same type — simple answer
+                    const [desc, count] = Object.entries(byDesc)[0];
+                    return `🚒 Hay **${count} unidades** de ${desc}. Ubicación: ${locs.join(', ')}. Marcas: ${marcas.join(', ')}.`;
+                }
+
+                // Multiple sub-types → show breakdown
+                let resp = `🚒 Encontré **${items.length} ítems** de "${kwStr}" en ${locs.join(', ')} — divididos en ${uniqueTypes} subtipos:\n\n`;
+                Object.entries(byDesc)
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([desc, count]) => {
+                        resp += `  🔹 ${count}x ${desc}\n`;
+                    });
+                resp += `\n🏷️ Marcas: ${marcas.join(', ')}. Estado: ${buenos} buenos, ${malos} mal estado, ${items.length-buenos-malos} sin especificar.`;
+                return resp;
             }
 
             // ─── AI CONVERSATIONAL BRAIN ──────────────────────────────────────
