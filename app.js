@@ -875,7 +875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return s;
             }
 
-            const stopWords = new Set(['si','sí','no','claro','ok','gracias','hola','saludos','tipo','tipos','clase','clases','cuanto','cuantos','donde','hay','de','el','la','los','las','un','una','que','en','son','es','me','mi','tu','su','como','cual','tengo','tiene','total','cantidad','muestramelo','muestrame','mostrar','muestra','descarga','descargar','descargalo','descargala','pdf','excel','quiero','ver','lista','listar','dame','dime','solo','nada','todos','todas','del','al','por','para','con','sin','hya','hay','aqui','alla','este','esta']);
+            const stopWords = new Set(['si','sí','no','claro','ok','gracias','hola','saludos','tipo','tipos','clase','clases','cuanto','cuantos','donde','hay','de','el','la','los','las','un','una','que','en','son','es','me','mi','tu','su','como','cual','tengo','tiene','total','cantidad','muestramelo','muestrame','mostrar','muestra','descarga','descargar','descargalo','descargala','pdf','excel','quiero','ver','lista','listar','dame','dime','solo','nada','todos','todas','del','al','por','para','con','sin','hya','hay','aqui','alla','este','esta','clasifica','clasificalos','agrupa','agrupalos','cuales','diferencia','diferencias']);
             const qNorm = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
             // Action detection
@@ -911,15 +911,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Context follow-up for "where", "how many", "status", etc.
-            const isFollowUp = /donde|estan|cuanto|cuanta|cantidad|estado|como estan|quien|ubicacion|donde se encuentran|que tal/.test(qNorm);
+            // Context follow-up for "where", "how many", "status", "classify", etc.
+            const isFollowUp = /donde|estan|cuanto|cuanta|cantidad|estado|como estan|quien|ubicacion|donde se encuentran|que tal|clasifica|diferencia|agrupa|cuales/.test(qNorm);
             const isActionOnly = (isShowAction || isPDF || isExcel || isAffirmative);
             
-            // If it's a follow-up or action-only, and we have previous context, USE IT.
-            if (lastMatchedItems.length > 0 && (matchedItems.length === 0 || isActionOnly)) {
-                if (isFollowUp || isActionOnly || query.length < 15) {
+            // MÁXIMA INTELIGENCIA: Context Retention Engine
+            // Si la búsqueda actual no dio resultados, pero el usuario sigue mencionando el tema anterior o hace una pregunta analítica, MANTENEMOS EL CONTEXTO.
+            if (lastMatchedItems.length > 0 && matchedItems.length === 0) {
+                const queryContainsOldKeyword = lastKeywords.some(kw => qNorm.includes(kw));
+                if (queryContainsOldKeyword || isFollowUp || isActionOnly || query.length < 15) {
                     matchedItems = lastMatchedItems;
-                    console.log("Using lastMatchedItems as context.");
+                    console.log("Super-Inteligencia: Contexto anterior recuperado exitosamente.");
                 }
             }
 
