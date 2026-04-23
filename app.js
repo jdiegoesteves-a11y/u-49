@@ -1,4 +1,4 @@
-import { inventoryU51, inventoryCC51, inventoryT51 } from './data.js?v=3';
+import { inventoryU49, inventoryU51, inventoryCC51, inventoryT51 } from './data.js?v=3';
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import {
@@ -13,24 +13,25 @@ import {
 } from "firebase/firestore";
 
 const inventoryMap = {
+    'U49': inventoryU49,
     'U51': inventoryU51,
     'CC51': inventoryCC51,
     'T51': inventoryT51
 };
 
-let currentUnit = localStorage.getItem('selectedUnit') || 'U51';
+let currentUnit = localStorage.getItem('selectedUnit') || 'U49';
 let currentCollection = `inventory_${currentUnit.toLowerCase()}`;
 let fullInventory = inventoryMap[currentUnit];
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyBDSvuzugExjjWS6wHhdoEXGeeNPz5FulY",
-    authDomain: "inventario-u51.firebaseapp.com",
-    projectId: "inventario-u51",
-    storageBucket: "inventario-u51.firebasestorage.app",
-    messagingSenderId: "520794533760",
-    appId: "1:520794533760:web:10fd8b7cd0bea3d3401b65",
-    measurementId: "G-EQFSQH4GEL"
+    apiKey: "AIzaSyDY1JJK3bOQzYbKxVBOwsCNy12P4YLz9Kw",
+    authDomain: "u-49-58ede.firebaseapp.com",
+    projectId: "u-49-58ede",
+    storageBucket: "u-49-58ede.firebasestorage.app",
+    messagingSenderId: "931984460144",
+    appId: "1:931984460144:web:055913b76c9eba479127b5",
+    measurementId: "G-C4QJEW689K"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -620,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const { jsPDF } = window.jspdf;
                 const pdfDoc = new jsPDF({ orientation: 'landscape' });
-                pdfDoc.text(`Inventario ${currentUnit} - Cía. 51`, 14, 15);
+                pdfDoc.text(`Inventario ${currentUnit} - Cía. 49`, 14, 15);
                 pdfDoc.setFontSize(10);
 
                 const fetchImageAsBase64 = (url) => {
