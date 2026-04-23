@@ -71,7 +71,7 @@ export const inventoryU49 = [
     {"codigo": "33765", "sicafi": "2005388", "pf": "16043", "descripcion": "ACOPLES HEMBRA A MACHO BRONCE 1,1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "34941", "sicafi": "2006484", "pf": "", "descripcion": "EXTENCION ELECTRICA", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "36665", "sicafi": "2008134", "pf": "16067", "descripcion": "ARPON DE MANGO", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
-    {"codigo": "38423", "sicafi": "2009927", "pf": "35149", "descripcion": "ACOPLES HEMBRA - MACHO 2 1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
+    {"codigo": "38423", "sicafi": "2009927", "pf": "35149", "descripcion": "ACOPLES HEMBRA - MACH 2 1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "38839", "sicafi": "2010397", "pf": "16039", "descripcion": "REDUCTORES DE 2,1/2\" A 1,1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "38841", "sicafi": "2010399", "pf": "9087", "descripcion": "ARPON", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "39906", "sicafi": "2011449", "pf": "", "descripcion": "TAPONES HEMBRA DE 2,1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
@@ -132,11 +132,11 @@ export const inventoryU49 = [
     {"codigo": "52063", "sicafi": "2026512", "pf": "16072", "descripcion": "ABSORBENTES DE 2 1/2", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "NN", "serie": "NN"},
     {"codigo": "52602", "sicafi": "2027901", "pf": "16073", "descripcion": "ABSORVENTE DE 2 1/2\"", "ubicacion": "I-214-U-49", "marca": "DESAUTEL", "modelo": "", "serie": ""},
     {"codigo": "53479", "sicafi": "2027444", "pf": "9070", "descripcion": "TRAMO DE MANGUERA 15 MTS 2 1/2\" NAFT", "ubicacion": "I-214-U-49", "marca": "NAFT", "modelo": "2 1/2", "serie": ""},
-    {"codigo": "53866", "sicafi": "", "pf": "16056", "descripcion": "FOCO PORTÁTIL CON BATERIA (FOCO LED)", "ubicacion": "I-214-U-49", "marca": "FIRECO", "modelo": "BRECIA", "serie": "185184"},
+    {"codigo": "53866", "sicafi": "", "pf": "16056", "descripcion": "FOCO PORT\u00c1TIL CON BATERIA (FOCO LED)", "ubicacion": "I-214-U-49", "marca": "FIRECO", "modelo": "BRECIA", "serie": "185184"},
     {"codigo": "57600", "sicafi": "", "pf": "16041", "descripcion": "LINTERNA PORTATIL", "ubicacion": "I-214-U-49", "marca": "NIGHTSTICK", "modelo": "XPR-5580R", "serie": "20407-4013"},
     {"codigo": "57601", "sicafi": "", "pf": "16048", "descripcion": "LINTERNA PORTATIL", "ubicacion": "I-214-U-49", "marca": "NIGHTSTICK", "modelo": "XPR-5580R", "serie": "20407-3872"},
     {"codigo": "57736", "sicafi": "", "pf": "16078", "descripcion": "BALIZA DE LUCES", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
-    {"codigo": "57752", "sicafi": "", "pf": "16066", "descripcion": "CAJONES METÁLICOS PARA MÁSTIL PORTÁTIL", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
+    {"codigo": "57752", "sicafi": "", "pf": "16066", "descripcion": "CAJONES MET\u00c1LICOS PARA M\u00c1STIL PORT\u00c1TIL", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "59489", "sicafi": "", "pf": "16098", "descripcion": "TRAMO DE MANGUERA DE 1 1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "59490", "sicafi": "", "pf": "16036", "descripcion": "TRAMO DE MANGUERA DE 1 1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
     {"codigo": "59491", "sicafi": "", "pf": "16080", "descripcion": "TRAMO DE MANGUERA DE 1 1/2\"", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "", "serie": ""},
@@ -151,9 +151,5 @@ export const inventoryU49 = [
     {"codigo": "67450", "sicafi": "-", "pf": "-", "descripcion": "CILINDRO DE AIRE COMPRIMIDO", "ubicacion": "I-214-U-49", "marca": "SCOTH 4.5", "modelo": "TC-3CCM-310", "serie": "OK800472"},
     {"codigo": "67451", "sicafi": "-", "pf": "-", "descripcion": "CILINDRO DE AIRE COMPRIMIDO", "ubicacion": "I-214-U-49", "marca": "SCOTT 4.5", "modelo": "TC-3CCM-310", "serie": "OK800411"},
     {"codigo": "69550", "sicafi": "-", "pf": "-", "descripcion": "DUCTO PARA VENTILADOR A BATERIA", "ubicacion": "I-214-U-49", "marca": "No Aplica", "modelo": "QUICKEE", "serie": ""},
-    {"codigo": "69562", "sicafi": "-", "pf": "-", "descripcion": "VENTILADOR A BATERÍA", "ubicacion": "I-214-U-49", "marca": "BLOWHARD", "modelo": "QUICKEE", "serie": "Q1-Q1-356755"}
+    {"codigo": "69562", "sicafi": "-", "pf": "-", "descripcion": "VENTILADOR A BATER\u00cdA", "ubicacion": "I-214-U-49", "marca": "BLOWHARD", "modelo": "QUICKEE", "serie": "Q1-Q1-356755"}
 ];
-
-export const inventoryU51 = [];
-export const inventoryCC51 = [];
-export const inventoryT51 = [];

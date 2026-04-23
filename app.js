@@ -1,4 +1,4 @@
-import { inventoryU49, inventoryU51, inventoryCC51, inventoryT51 } from './data.js?v=3';
+import { inventoryU49 } from './data.js?v=3';
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import {
@@ -13,10 +13,7 @@ import {
 } from "firebase/firestore";
 
 const inventoryMap = {
-    'U49': inventoryU49,
-    'U51': inventoryU51,
-    'CC51': inventoryCC51,
-    'T51': inventoryT51
+    'U49': inventoryU49
 };
 
 let currentUnit = localStorage.getItem('selectedUnit') || 'U49';
@@ -1118,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (items.length === 0) {
                     if (intent.greet) {
                         const cats = [...new Set(currentInventoryData.map(i => (i.descripcion||'').split(' ')[0]))].slice(0,8).join(', ');
-                        return `¡Hola ${inventariador || 'Bombero'}! 👋 Soy el Cerebro Logístico U-51.\n\nPuedo ayudarte con:\n  🔍 Búsquedas: "cuántos pitones hay", "busca escaleras"\n  📊 Análisis: "clasifica los tramos", "analiza el inventario"\n  📄 Reportes: "descarga el PDF", "exportar Excel"\n  🗺️ Ubicaciones: "dónde están los cascos"\n\nEquipos disponibles en esta unidad: ${cats}... ¿Qué necesitas? 🚒`;
+                        return `¡Hola ${inventariador || 'Bombero'}! 👋 Soy el Cerebro Logístico U-49.\n\nPuedo ayudarte con:\n  🔍 Búsquedas: "cuántos pitones hay", "busca escaleras"\n  📊 Análisis: "clasifica los tramos", "analiza el inventario"\n  📄 Reportes: "descarga el PDF", "exportar Excel"\n  🗺️ Ubicaciones: "dónde están los cascos"\n\nEquipos disponibles en esta unidad: ${cats}... ¿Qué necesitas? 🚒`;
                     }
                     return null;
                 }
@@ -1215,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     : "Sin contexto de búsqueda activo.");
                 const intentContext    = Object.entries(INTENTS).filter(([,v]) => v).map(([k]) => k).join(', ') || 'conversación general';
 
-                const systemPrompt = `Eres "Cerebro Logístico U-51", una IA avanzada de inventario para Bomberos.
+                const systemPrompt = `Eres "Cerebro Logístico U-49", una IA avanzada de inventario para Bomberos.
 INVENTARIO: ${inventorySummary}
 DATOS ACTUALES: ${dataContext}
 INTENCIÓN DEL USUARIO: ${intentContext}
